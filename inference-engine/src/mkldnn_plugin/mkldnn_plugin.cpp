@@ -115,6 +115,7 @@ Engine::LoadExeNetworkImpl(const InferenceEngine::ICNNNetwork &network, const st
 
         const char* newLPTEnabled = std::getenv("OPENVINO_NEW_NGRAPH_LPT");
         if ((newLPTEnabled && std::strcmp(newLPTEnabled, "1") == 0) && conf.lpTransformsMode == Config::LPTransformsMode::On) {
+            auto startTime = std::chrono::high_resolution_clock::now();
             auto params = LayerTransformation::Params(true,  // updatePrecisions
                                                       true,  // quantizeOutputs
                                                       true,  // weightsToConst
@@ -134,7 +135,10 @@ Engine::LoadExeNetworkImpl(const InferenceEngine::ICNNNetwork &network, const st
             transformer.transform(nGraphFunc);
 
             // TODO: Implement remaining part
+            auto endTime = std::chrono::high_resolution_clock::now();
+            std::cerr << "New LPT duration: " << std::chrono::duration_cast<std::chrono::nanoseconds>(endTime - startTime).count() << "\n";
         }
+
 
         ngraph::pass::ConvertOpSet1ToLegacy(transformations_callback).run_on_function(nGraphFunc);
 

@@ -350,10 +350,10 @@ void LowPrecisionTransformer::transform(std::shared_ptr<Function> network) {
 
 #endif
 
-    {
-        std::vector<std::shared_ptr<ngraph::Function>> module{network};
-        ngraph::pass::VisualizeTree("before_ltp.png").run_on_module(module);
-    }
+//    {
+//        std::vector<std::shared_ptr<ngraph::Function>> module{network};
+//        ngraph::pass::VisualizeTree("before_ltp.png").run_on_module(module);
+//    }
 
     transformations.setParamsManager(this);
     transformations.setLayerTransformationsManager(this);
@@ -414,10 +414,10 @@ void LowPrecisionTransformer::transform(std::shared_ptr<Function> network) {
         #endif
         #endif
     }
-    {
-        std::vector<std::shared_ptr<ngraph::Function>> module{network};
-        ngraph::pass::VisualizeTree("after_layers_replacement.svg").run_on_module(module);
-    }
+//    {
+//        std::vector<std::shared_ptr<ngraph::Function>> module{network};
+//        ngraph::pass::VisualizeTree("after_layers_replacement.svg").run_on_module(module);
+//    }
 
 
     { // Step #3: cleanup transformations execution
@@ -426,12 +426,12 @@ void LowPrecisionTransformer::transform(std::shared_ptr<Function> network) {
         pass.run_on_function(network);
     }
 
-    {
-        std::vector<std::shared_ptr<ngraph::Function>> module{network};
-        ngraph::pass::VisualizeTree("after_lpt.svg").run_on_module(module);
-    }
+//    {
+//        std::vector<std::shared_ptr<ngraph::Function>> module{network};
+//        ngraph::pass::VisualizeTree("after_lpt.svg").run_on_module(module);
+//    }
 
-
+    std::cerr << "FQ fold duration:" << FQ_fold_duration.count() << "\n";
 #if 0 // TODO LPT-TO-NGRAPH
 #ifdef LPT_TRANSFORMED_MODEL_PATH
     ResponseDesc transformedModelResponse;

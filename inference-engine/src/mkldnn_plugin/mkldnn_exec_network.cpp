@@ -72,6 +72,7 @@ MKLDNNExecNetwork::MKLDNNExecNetwork(const InferenceEngine::ICNNNetwork &network
     } else {
         const char* newLPTEnabled = std::getenv("OPENVINO_NEW_NGRAPH_LPT");
         if ((!newLPTEnabled || std::strcmp(newLPTEnabled, "1") != 0) && _cfg.lpTransformsMode == Config::LPTransformsMode::On) {
+            auto startTime = std::chrono::high_resolution_clock::now();
             auto params = LayerTransformation::Params(true,  // updatePrecisions
                                                       true,  // quantizeOutputs
                                                       true,  // weightsToConst
@@ -86,6 +87,9 @@ MKLDNNExecNetwork::MKLDNNExecNetwork(const InferenceEngine::ICNNNetwork &network
                     LayerTransformation::Params(params).setPrecisionsOnActivations({ Precision::U8 }),
                     "ScaleShift"));
             transformer.transform(*_clonedNetwork);
+
+            auto endTime = std::chrono::high_resolution_clock::now();
+            std::cerr << "Old LPT duration: " << std::chrono::duration_cast<std::chrono::nanoseconds>(endTime - startTime).count() << "\n";
 
             // Check if network is INT8 or Binary.
             // BF16 transformations were disabled since CPU plug-in doesn't support mixed precision execution:

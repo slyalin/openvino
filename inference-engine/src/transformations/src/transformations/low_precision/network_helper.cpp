@@ -1740,6 +1740,8 @@ std::shared_ptr<opset1::Constant> roundWithTolerance(std::shared_ptr<Node> node,
     }
 }
 
+std::chrono::nanoseconds FQ_fold_duration = std::chrono::nanoseconds::zero();
+
 // Decompose FakeQuantize to FakeQuantize with output integer limits (quantize), dequatized MultiplyAdd
 // To align types the resulting sequence is FakeQuantize -> Convert -> Convert -> MultiplyAdd
 std::tuple<std::shared_ptr<Node>, std::shared_ptr<Node>> decomposeFakeQuantize(std::shared_ptr<opset1::FakeQuantize> fq,
@@ -1783,6 +1785,9 @@ std::tuple<std::shared_ptr<Node>, std::shared_ptr<Node>> decomposeFakeQuantize(s
         shift = outputLow.get_node_shared_ptr();
     }
 
+    auto startTime = std::chrono::high_resolution_clock::now();
+
+
     // Build a substitution sub-graph:
     auto newFQ = fold_fake_quantize<opset1::FakeQuantize>(
             fq->input_value(0),
@@ -1797,6 +1802,10 @@ std::tuple<std::shared_ptr<Node>, std::shared_ptr<Node>> decomposeFakeQuantize(s
             make_shared<opset1::Convert>(
                     fold<opset1::Convert>(newFQ, precision),
                     fq->get_output_element_type(0)), scale, shift);
+
+    auto endTime = std::chrono::high_resolution_clock::now();
+    FQ_fold_duration += std::chrono::duration_cast<std::chrono::nanoseconds>(endTime - startTime);
+
     replace_node(fq, dequantize);
     // Make type-relaxed node
 

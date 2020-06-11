@@ -346,6 +346,8 @@ std::shared_ptr<Node> fold_reshape(Args&&... args) {
     return node;
 }
 
+
+
 template <typename T, typename... Args>
 std::shared_ptr<Node> fold_fake_quantize(Args&&... args) {
     std::shared_ptr<Node> node = std::make_shared<T>(std::forward<Args>(args)...);
@@ -379,6 +381,10 @@ std::tuple<std::shared_ptr<Node>, std::shared_ptr<Node>> decomposeFakeQuantize(s
                                             float max);
 
 std::shared_ptr<Node> optimizeAdd(std::shared_ptr<opset1::Add> add);
+
+extern std::chrono::nanoseconds FQ_fold_duration;
+
+
 
 }  // namespace low_precision
 }  // namespace pass
