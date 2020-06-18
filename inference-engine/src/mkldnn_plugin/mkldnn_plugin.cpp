@@ -27,6 +27,7 @@
 #include <ngraph/opsets/opset2.hpp>
 #include <ngraph/opsets/opset3.hpp>
 #include <ngraph/op/fused/gelu.hpp>
+#include "ngraph_ops/fully_connected.hpp"
 
 #include <ngraph/pass/visualize_tree.hpp>
 #include "ngraph_ops/subgraph.hpp"
@@ -97,10 +98,13 @@ Engine::LoadExeNetworkImpl(const InferenceEngine::ICNNNetwork &network, const st
                 return stdOp->input_value(0).get_shape().size() <= 5lu && stdOp->input_value(0).get_shape().size() == stdOp->get_output_shape(0).size();
             }
 
+            if (auto fc_op = std::dynamic_pointer_cast<const ngraph::op::FullyConnected>(node)) {
+                return fc_op->input_value(0).get_shape().size() == 3ul;
+            }
+
             return std::dynamic_pointer_cast<const ::ngraph::opset2::Gelu>(node) ||
                 std::dynamic_pointer_cast<const ::ngraph::opset2::BatchToSpace>(node) ||
-                std::dynamic_pointer_cast<const ::ngraph::opset2::SpaceToBatch>(node) ||
-                std::dynamic_pointer_cast<const ::ngraph::opset3::ShuffleChannels>(node);
+                std::dynamic_pointer_cast<const ::ngraph::opset2::SpaceToBatch>(node);
         };
         auto nGraphFunc = clonedNetwork->getFunction();
         // Disable shape inference (WA for generic operations)
