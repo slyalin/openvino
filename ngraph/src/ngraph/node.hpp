@@ -46,7 +46,7 @@
 #include "ngraph/type.hpp"
 
 // turn it off if you are a real Man
-#define LPT_SUPPORT
+//#define LPT_SUPPORT
 
 namespace ngraph
 {
