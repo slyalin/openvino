@@ -46,6 +46,7 @@ void op::v3::ShapeOf::validate_and_infer_types()
                           "Output type must be i32 or i64");
     set_input_is_relevant_to_value(0, false);
     set_output_type(0, m_output_type, PartialShape{get_input_partial_shape(0).rank()});
+    set_output_value(0, get_input_partial_shape(0));
 }
 
 bool ngraph::op::v3::ShapeOf::visit_attributes(AttributeVisitor& visitor)

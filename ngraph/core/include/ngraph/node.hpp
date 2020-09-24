@@ -229,6 +229,8 @@ namespace ngraph
                              const element::Type& element_type,
                              const PartialShape& pshape);
 
+        void set_output_value(size_t i, const PartialShape& value);
+
         /// Sets the number of outputs
         void set_output_size(size_t output_size);
 

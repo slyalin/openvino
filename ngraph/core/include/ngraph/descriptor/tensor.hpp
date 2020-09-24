@@ -49,10 +49,12 @@ namespace ngraph
             void set_tensor_type(const element::Type& element_type, const PartialShape& pshape);
             void set_element_type(const element::Type& elemenet_type);
             void set_partial_shape(const PartialShape& partial_shape);
+            void set_value(const PartialShape& value) { m_value = value; }
 
             const element::Type& get_element_type() const { return m_element_type; }
             const Shape& get_shape() const;
             const PartialShape& get_partial_shape() const { return m_partial_shape; }
+            const PartialShape& get_value() const { return m_value; }
             void set_pool_offset(size_t);
             size_t get_pool_offset() const;
 
@@ -69,6 +71,7 @@ namespace ngraph
             PartialShape m_partial_shape;
             Node* m_node{nullptr};
             size_t m_node_output_number{0};
+            PartialShape m_value;
 
             std::string m_name;
             size_t m_pool_offset{0};

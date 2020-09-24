@@ -284,6 +284,11 @@ void Node::set_output_type(size_t i, const element::Type& element_type, const Pa
     get_output_descriptor(i).get_tensor_ptr()->set_tensor_type(element_type, pshape);
 }
 
+void Node::set_output_value(size_t i, const PartialShape& value)
+{
+    get_output_descriptor(i).get_tensor_ptr()->set_value(value);
+}
+
 std::string Node::description() const
 {
     return get_type_name();
