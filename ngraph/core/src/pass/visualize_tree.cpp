@@ -287,7 +287,7 @@ namespace
                 if (nvtot)
                     label << "{" << output.get_element_type().get_type_name() << "}";
                 if (nvtos)
-                    label << pretty_partial_shape(output.get_partial_shape());
+                    label << pretty_partial_shape(output.get_partial_shape()) << " <PV: " << output.get_tensor().get_value() << ">";
             }
         return label.str();
     }

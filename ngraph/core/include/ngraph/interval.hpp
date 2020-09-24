@@ -23,6 +23,7 @@
 #include <stdexcept>
 
 #include "ngraph/ngraph_visibility.hpp"
+#include "ngraph/check.hpp"
 
 namespace ngraph
 {
@@ -51,6 +52,13 @@ namespace ngraph
         Interval(value_type val);
 
         Interval& operator=(const Interval& interval) = default;
+
+        template <typename T>
+        explicit operator T () const
+        {
+            NGRAPH_CHECK(size() == 1, "To be casted to a scalar, interval should have length equal to 1");
+            return get_min_val();
+        }
 
         /// \brief The number of elements in the interval. Zero if max < min.
         size_type size() const;
@@ -94,6 +102,9 @@ namespace ngraph
 
         /// \brief Change this interval to only include elements also in interval
         Interval& operator&=(const Interval& interval);
+
+        bool operator< (const Interval& interval) const;
+        bool operator> (const Interval& interval) const;
 
         /// \brief True if this interval includes value
         bool contains(value_type value) const;

@@ -205,6 +205,14 @@ namespace ngraph
                                 typename element_type_traits<element::Type_t::u64>::value_type>(
                                 value));
                         break;
+                    case element::Type_t::interval:
+                        std::fill_n(
+                                get_data_ptr_nc<element::Type_t::interval>(),
+                                size,
+                                static_cast<
+                                        typename element_type_traits<element::Type_t::interval>::value_type>(
+                                        value));
+                        break;
                     case element::Type_t::u1: throw std::runtime_error("unsupported type");
                     case element::Type_t::undefined: throw std::runtime_error("unsupported type");
                     case element::Type_t::dynamic: throw std::runtime_error("unsupported type");
@@ -542,6 +550,9 @@ namespace ngraph
                         break;
                     case element::Type_t::u64:
                         write_buffer<uint64_t, T>(target, source, target_element_count);
+                        break;
+                    case element::Type_t::interval:
+                        write_buffer<Interval, T>(target, source, target_element_count);
                         break;
                     case element::Type_t::u1: throw std::runtime_error("unsupported type");
                     case element::Type_t::undefined: throw std::runtime_error("unsupported type");

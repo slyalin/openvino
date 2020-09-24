@@ -16,6 +16,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <sstream>
 
 #include "itt.hpp"
 #include "ngraph/log.hpp"
@@ -45,6 +46,13 @@ string to_cpp_string(T value)
         rc = ss.str();
     }
     return rc;
+}
+
+string to_cpp_string(ngraph::Interval value)
+{
+    ostringstream ss;
+    ss << value;
+    return ss.str();
 }
 
 constexpr NodeTypeInfo op::Constant::type_info;
@@ -360,6 +368,7 @@ string op::Constant::convert_value_to_string(size_t index) const
     case element::Type_t::u16: rc = to_string(get_data_ptr<uint16_t>()[index]); break;
     case element::Type_t::u32: rc = to_string(get_data_ptr<uint32_t>()[index]); break;
     case element::Type_t::u64: rc = to_string(get_data_ptr<uint64_t>()[index]); break;
+    case element::Type_t::interval: rc = to_cpp_string(get_data_ptr<ngraph::Interval>()[index]); break;
     case element::Type_t::undefined: throw runtime_error("unsupported type");
     case element::Type_t::dynamic: throw runtime_error("unsupported type");
     }
@@ -456,6 +465,12 @@ vector<string> op::Constant::get_value_strings() const
         for (uint64_t value : get_vector<uint64_t>())
         {
             rc.push_back(to_string(value));
+        }
+        break;
+    case element::Type_t::interval:
+        for (Interval value : get_vector<ngraph::Interval>())
+        {
+            rc.push_back(to_cpp_string(value));
         }
         break;
     case element::Type_t::u1: throw runtime_error("unsupported type");
@@ -605,6 +620,10 @@ bool op::Constant::are_all_data_elements_bitwise_identical() const
     {
         rc = test_bitwise_identical<uint64_t>(this);
         break;
+    }
+    case element::Type_t::interval:
+    {
+        rc = test_bitwise_identical<ngraph::Interval>(this);
     }
     case element::Type_t::u1:
     case element::Type_t::undefined:

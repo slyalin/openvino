@@ -25,6 +25,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <ngraph/interval.hpp>
 
 #include "ngraph/attribute_adapter.hpp"
 #include "ngraph/deprecated.hpp"
@@ -54,7 +55,8 @@ namespace ngraph
             u8,
             u16,
             u32,
-            u64
+            u64,
+            interval
         };
 
         class NGRAPH_API Type
@@ -146,6 +148,7 @@ namespace ngraph
         extern NGRAPH_API const Type u16;
         extern NGRAPH_API const Type u32;
         extern NGRAPH_API const Type u64;
+        extern NGRAPH_API const Type interval;
 
         template <typename T>
         Type from()
@@ -180,6 +183,8 @@ namespace ngraph
         NGRAPH_API Type from<ngraph::bfloat16>();
         template <>
         NGRAPH_API Type from<ngraph::float16>();
+        template <>
+        NGRAPH_API Type from<ngraph::Interval>();
 
         NGRAPH_API
         std::ostream& operator<<(std::ostream& out, const ngraph::element::Type& obj);

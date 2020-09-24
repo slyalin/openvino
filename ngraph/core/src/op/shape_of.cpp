@@ -183,6 +183,7 @@ void op::v0::ShapeOf::validate_and_infer_types()
 {
     set_input_is_relevant_to_value(0, false);
     set_output_type(0, element::i64, PartialShape{get_input_partial_shape(0).rank()});
+    set_output_value(0, get_input_partial_shape(0));
 }
 
 bool ngraph::op::v0::ShapeOf::visit_attributes(AttributeVisitor& visitor)

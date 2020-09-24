@@ -42,6 +42,7 @@ const element::Type element::u8(element::Type_t::u8);
 const element::Type element::u16(element::Type_t::u16);
 const element::Type element::u32(element::Type_t::u32);
 const element::Type element::u64(element::Type_t::u64);
+const element::Type element::interval(element::Type_t::interval);
 
 constexpr DiscreteTypeInfo AttributeAdapter<element::Type>::type_info;
 
@@ -98,6 +99,7 @@ static const element_types_map_t& get_type_info_map()
         {element::Type_t::u16, TypeInfo(16, false, false, false, "uint16_t", "u16")},
         {element::Type_t::u32, TypeInfo(32, false, false, false, "uint32_t", "u32")},
         {element::Type_t::u64, TypeInfo(64, false, false, false, "uint64_t", "u64")},
+        {element::Type_t::interval, TypeInfo(64, false, false, false, "Interval", "interval")},
     };
     return s_type_info_map;
 };
@@ -244,6 +246,11 @@ namespace ngraph
         {
             return Type_t::bf16;
         }
+        template <>
+        Type from<ngraph::Interval>()
+        {
+            return Type_t::interval;
+        }
     }
 }
 
@@ -330,6 +337,7 @@ size_t ngraph::compiler_byte_size(element::Type_t et)
         ET_CASE(u16);
         ET_CASE(u32);
         ET_CASE(u64);
+        ET_CASE(interval);
 #undef ET_CASE
     case element::Type_t::undefined: return 0;
     case element::Type_t::dynamic: return 0;
@@ -361,7 +369,8 @@ namespace ngraph
                                         {"u8", element::Type_t::u8},
                                         {"u16", element::Type_t::u16},
                                         {"u32", element::Type_t::u32},
-                                        {"u64", element::Type_t::u64}});
+                                        {"u64", element::Type_t::u64},
+                                        {"interval", element::Type_t::interval}});
         return enum_names;
     }
 }

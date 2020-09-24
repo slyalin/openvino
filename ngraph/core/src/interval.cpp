@@ -128,6 +128,16 @@ Interval& Interval::operator&=(const Interval& interval)
     return *this = *this & interval;
 }
 
+bool Interval::operator<(const Interval& interval) const
+{
+    return std::max(m_min_val, m_max_val) < std::min(interval.m_min_val, interval.m_max_val);
+}
+
+bool Interval::operator>(const Interval& interval) const
+{
+    return std::max(m_min_val, m_max_val) > std::min(interval.m_min_val, interval.m_max_val);
+}
+
 bool Interval::contains(value_type value) const
 {
     return m_min_val <= value && value <= m_max_val;

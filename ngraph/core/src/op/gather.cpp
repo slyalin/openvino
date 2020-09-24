@@ -47,6 +47,93 @@ shared_ptr<Node> op::v0::Gather::clone_with_new_inputs(const OutputVector& new_a
     return make_shared<v0::Gather>(new_args.at(PARAMS), new_args.at(INDICES), m_axis);
 }
 
+
+namespace
+{
+    template <element::Type_t ET>
+    bool evaluate(const HostTensorPtr& arg0,
+                  const HostTensorPtr& arg1,
+                  const HostTensorPtr& out,
+                  size_t axis)
+    {
+        using T = typename element_type_traits<ET>::value_type;
+        Shape params_shape = arg0->get_shape();
+        Shape indices_shape = arg1->get_shape();
+        Shape out_shape(params_shape.size() + indices_shape.size() - 1);
+        uint64_t i = 0;
+        for (; i < axis; i++)
+        {
+            out_shape[i] = params_shape[i];
+        }
+        for (uint64_t j = 0; j < indices_shape.size(); i++, j++)
+        {
+            out_shape[i] = indices_shape[j];
+        }
+        for (uint64_t j = axis + 1; j < params_shape.size(); i++, j++)
+        {
+            out_shape[i] = params_shape[j];
+        }
+
+        out->set_shape(out_shape);
+
+        if (arg1->get_element_type() == element::i64)
+        {
+            runtime::reference::gather<T, int64_t>(arg0->get_data_ptr<ET>(),
+                                                   arg1->get_data_ptr<int64_t>(),
+                                                   out->get_data_ptr<ET>(),
+                                                   arg0->get_shape(),
+                                                   arg1->get_shape(),
+                                                   out->get_shape(),
+                                                   axis);
+        }
+        else if (arg1->get_element_type() == element::i32)
+        {
+            runtime::reference::gather<T, int32_t>(arg0->get_data_ptr<ET>(),
+                                                   arg1->get_data_ptr<int32_t>(),
+                                                   out->get_data_ptr<ET>(),
+                                                   arg0->get_shape(),
+                                                   arg1->get_shape(),
+                                                   out->get_shape(),
+                                                   axis);
+        }
+        else
+        {
+            throw ngraph_error("Unexpected type");
+        }
+
+        return true;
+    }
+
+    bool evaluate_gather(const HostTensorPtr& arg0,
+                         const HostTensorPtr& arg1,
+                         const HostTensorPtr& out,
+                         size_t axis)
+    {
+        bool rc = true;
+
+        switch (out->get_element_type())
+        {
+            TYPE_CASE(i32)(arg0, arg1, out, axis);
+                break;
+            TYPE_CASE(i64)(arg0, arg1, out, axis);
+                break;
+            TYPE_CASE(u32)(arg0, arg1, out, axis);
+                break;
+            TYPE_CASE(u64)(arg0, arg1, out, axis);
+                break;
+            TYPE_CASE(f16)(arg0, arg1, out, axis);
+                break;
+            TYPE_CASE(f32)(arg0, arg1, out, axis);
+                break;
+            TYPE_CASE(boolean)(arg0, arg1, out, axis);
+                break;
+            default: rc = false; break;
+        }
+        return rc;
+    }
+}
+
+
 void op::v0::Gather::validate_and_infer_types()
 {
     element::Type result_et = get_input_element_type(PARAMS);
@@ -174,6 +261,26 @@ void op::v1::Gather::validate_and_infer_types()
         result_shape = PartialShape::dynamic();
     }
 
+    auto partial_value = get_input_source_output(PARAMS).get_tensor().get_value();
+    if(partial_value != PartialShape())  // TODO: UGLY UNRELIABLE
+    {
+        // some value is known
+        auto partial_value_dims = std::vector<Dimension>(partial_value);
+        // TODO: UGLY: implicit reinterpreation of Dimension as Interval
+        auto input0 = make_shared<runtime::HostTensor>(element::interval, Shape{partial_value_dims.size()}, partial_value_dims.data());
+        auto indices_value = as_type_ptr<op::Constant>(get_input_node_shared_ptr(INDICES));
+        if(indices_value)
+        {
+            auto input1 = make_shared<runtime::HostTensor>(indices_value);
+            auto out = make_shared<runtime::HostTensor>(element::interval, result_shape.get_shape());
+            ::evaluate<element::Type_t::interval>(input0, input1, out, get_axis());
+            // TODO: UGLY: implicit reinterpreation of Dimension as Interval
+            Dimension* res_dims = out->get_data_ptr<Dimension>();
+            PartialShape result_pv(std::vector<Dimension>(res_dims, res_dims + out->get_shape().size()));
+            set_output_value(0, result_pv);
+        }
+    }
+
     set_output_type(0, result_et, result_shape);
 }
 
@@ -200,91 +307,6 @@ shared_ptr<Node> op::v1::Gather::clone_with_new_inputs(const OutputVector& new_a
 {
     check_new_args_count(this, new_args);
     return make_shared<v1::Gather>(new_args.at(PARAMS), new_args.at(INDICES), new_args.at(AXIS));
-}
-
-namespace
-{
-    template <element::Type_t ET>
-    bool evaluate(const HostTensorPtr& arg0,
-                  const HostTensorPtr& arg1,
-                  const HostTensorPtr& out,
-                  size_t axis)
-    {
-        using T = typename element_type_traits<ET>::value_type;
-        Shape params_shape = arg0->get_shape();
-        Shape indices_shape = arg1->get_shape();
-        Shape out_shape(params_shape.size() + indices_shape.size() - 1);
-        uint64_t i = 0;
-        for (; i < axis; i++)
-        {
-            out_shape[i] = params_shape[i];
-        }
-        for (uint64_t j = 0; j < indices_shape.size(); i++, j++)
-        {
-            out_shape[i] = indices_shape[j];
-        }
-        for (uint64_t j = axis + 1; j < params_shape.size(); i++, j++)
-        {
-            out_shape[i] = params_shape[j];
-        }
-
-        out->set_shape(out_shape);
-
-        if (arg1->get_element_type() == element::i64)
-        {
-            runtime::reference::gather<T, int64_t>(arg0->get_data_ptr<ET>(),
-                                                   arg1->get_data_ptr<int64_t>(),
-                                                   out->get_data_ptr<ET>(),
-                                                   arg0->get_shape(),
-                                                   arg1->get_shape(),
-                                                   out->get_shape(),
-                                                   axis);
-        }
-        else if (arg1->get_element_type() == element::i32)
-        {
-            runtime::reference::gather<T, int32_t>(arg0->get_data_ptr<ET>(),
-                                                   arg1->get_data_ptr<int32_t>(),
-                                                   out->get_data_ptr<ET>(),
-                                                   arg0->get_shape(),
-                                                   arg1->get_shape(),
-                                                   out->get_shape(),
-                                                   axis);
-        }
-        else
-        {
-            throw ngraph_error("Unexpected type");
-        }
-
-        return true;
-    }
-
-    bool evaluate_gather(const HostTensorPtr& arg0,
-                         const HostTensorPtr& arg1,
-                         const HostTensorPtr& out,
-                         size_t axis)
-    {
-        bool rc = true;
-
-        switch (out->get_element_type())
-        {
-            TYPE_CASE(i32)(arg0, arg1, out, axis);
-            break;
-            TYPE_CASE(i64)(arg0, arg1, out, axis);
-            break;
-            TYPE_CASE(u32)(arg0, arg1, out, axis);
-            break;
-            TYPE_CASE(u64)(arg0, arg1, out, axis);
-            break;
-            TYPE_CASE(f16)(arg0, arg1, out, axis);
-            break;
-            TYPE_CASE(f32)(arg0, arg1, out, axis);
-            break;
-            TYPE_CASE(boolean)(arg0, arg1, out, axis);
-            break;
-        default: rc = false; break;
-        }
-        return rc;
-    }
 }
 
 bool op::v0::Gather::evaluate(const HostTensorVector& outputs, const HostTensorVector& inputs) const

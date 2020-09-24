@@ -91,6 +91,10 @@ namespace ngraph
                 val = std::make_shared<ngraph::op::Constant>(
                     type, ngraph::Shape{}, std::vector<uint8_t>{static_cast<uint8_t>(num)});
                 break;
+            case element::Type_t::interval:
+                val = std::make_shared<ngraph::op::Constant>(
+                        type, ngraph::Shape{}, std::vector<Interval>{static_cast<Interval>(num)});
+                break;
             case element::Type_t::dynamic:
                 throw ngraph_error("make_constant: Unsupported element type 'dynamic'");
             case element::Type_t::boolean:

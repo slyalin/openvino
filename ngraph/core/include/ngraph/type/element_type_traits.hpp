@@ -108,4 +108,9 @@ namespace ngraph
     {
         using value_type = uint64_t;
     };
+    template <>
+    struct element_type_traits<element::Type_t::interval>
+    {
+        using value_type = ngraph::Interval;
+    };
 }

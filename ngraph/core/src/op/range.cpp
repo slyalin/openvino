@@ -404,10 +404,12 @@ void op::v0::Range::validate_and_infer_types()
     case element::Type_t::u16: result_shape = infer_output_shape<uint16_t>(this, result_et); break;
     case element::Type_t::u32: result_shape = infer_output_shape<uint32_t>(this, result_et); break;
     case element::Type_t::u64: result_shape = infer_output_shape<uint64_t>(this, result_et); break;
+    //case element::Type_t::interval: result_shape = infer_output_shape<ngraph::Interval>(this, result_et); break;
     case element::Type_t::dynamic: result_shape = PartialShape::dynamic(1); break;
     case element::Type_t::u1:
     case element::Type_t::undefined:
     case element::Type_t::boolean:
+    case element::Type_t::interval:
         NODE_VALIDATION_CHECK(
             this, false, "Internal nGraph error: unsupported element type: ", result_et);
         break;
