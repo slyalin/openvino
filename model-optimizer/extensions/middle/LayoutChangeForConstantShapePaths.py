@@ -30,7 +30,8 @@ from mo.middle.replacement import MiddleReplacementPattern
 class LayoutChangeForConstantShapePaths(MiddleReplacementPattern):
     enabled = True
     graph_condition = [lambda graph: graph.graph['layout'] == 'NHWC',
-                       lambda graph: not graph.graph['cmd_params'].static_shape]
+                       lambda graph: not graph.graph['cmd_params'].static_shape,
+                       lambda graph: not graph.graph['cmd_params'].experimental_layout_change]
     force_clean_up = True
 
     def run_after(self):

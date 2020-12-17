@@ -382,7 +382,8 @@ def get_tf_cli_options():
         'tensorflow_object_detection_api_pipeline_config': '- Use configuration file used to generate the model with '
                                                            'Object Detection API',
         'tensorflow_custom_layer_libraries': '- List of shared libraries with TensorFlow custom layers implementation',
-        'tensorboard_logdir': '- Path to model dump for TensorBoard'
+        'tensorboard_logdir': '- Path to model dump for TensorBoard',
+        'experimental_layout_change': '- Perform layout change from NHWC to NCHW using experimental approach.',
     }
 
     return OrderedDict(sorted(d.items(), key=lambda t: t[0]))
@@ -511,8 +512,8 @@ def get_tf_cli_parser(parser: argparse.ArgumentParser = None):
                                'nodes information.',
                           action=CanonicalizePathCheckExistenceAction)
     tf_group.add_argument('--tensorflow_use_custom_operations_config',
-                              help='Use the configuration file with custom operation description.',
-                              action=DeprecatedCanonicalizePathCheckExistenceAction)
+                          help='Use the configuration file with custom operation description.',
+                          action=DeprecatedCanonicalizePathCheckExistenceAction)
     tf_group.add_argument('--tensorflow_object_detection_api_pipeline_config',
                           help='TensorFlow*: path to the pipeline configuration file used to generate model created '
                                'with help of Object Detection API.',
@@ -529,6 +530,10 @@ def get_tf_cli_parser(parser: argparse.ArgumentParser = None):
     tf_group.add_argument('--disable_nhwc_to_nchw',
                           help='Disables default translation from NHWC to NCHW',
                           action='store_true')
+    tf_group.add_argument('--experimental_layout_change',
+                          help='Perform layout change from NHWC to NCHW using experimental approach.',
+                          action='store_true',
+                          default=False)
     return parser
 
 

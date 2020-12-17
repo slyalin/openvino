@@ -30,7 +30,8 @@ class InsertLayoutPropagationTranspose(MiddleReplacementPattern):
     """
     enabled = True
     force_clean_up = True  # need to run clean up after the transformation to update shapes
-    graph_condition = [lambda graph: graph.graph['layout'] == 'NHWC']
+    graph_condition = [lambda graph: graph.graph['layout'] == 'NHWC',
+                       lambda graph: not graph.graph['cmd_params'].experimental_layout_change]
 
     def run_after(self):
         return [PostMiddleStart]

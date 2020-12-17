@@ -130,7 +130,8 @@ class StridedSlice(Op):
         idx = np.nonzero(node.ellipsis_mask)
         node.ellipsis_mask[idx] = 0
 
-        if node.graph.graph['layout'] == 'NHWC' and node.out_port(0).data.get_value() is None:
+        if node.graph.graph['layout'] == 'NHWC' and node.out_port(0).data.get_value() is None and \
+                not node.graph.graph['cmd_params'].experimental_layout_change:
             PermuteAttrs.create_permute_attrs(node, attrs=[('shrink_axis_mask', 'input:0', permute_masks),
                                                            ('new_axis_mask', 'input:0', permute_masks),
                                                            ('ellipsis_mask', 'input:0', permute_masks),

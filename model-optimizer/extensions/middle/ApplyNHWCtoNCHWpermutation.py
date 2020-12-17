@@ -21,7 +21,8 @@ from mo.ops.op import PermuteAttrs
 
 class ApplyNHWCtoNCHWpermutation(MiddleReplacementPattern):
     enabled = True
-    graph_condition = [lambda graph: graph.graph['layout'] == 'NHWC']
+    graph_condition = [lambda graph: graph.graph['layout'] == 'NHWC',
+                       lambda graph: not graph.graph['cmd_params'].experimental_layout_change]
 
     def run_after(self):
         return [LayoutChangeForConstantShapePaths]

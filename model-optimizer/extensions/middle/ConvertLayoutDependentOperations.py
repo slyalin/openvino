@@ -26,6 +26,7 @@ class ConvertLayoutDependentOperations(MiddleReplacementPattern):
          This pass finds all convolutions and in case if layout of convolution differs from graph layout
          we insert permutes before and after convolution and convert convolution attributes
     """
+    graph_condition = [lambda graph: not graph.graph['cmd_params'].experimental_layout_change]
 
     enabled = True
 
@@ -34,13 +35,11 @@ class ConvertLayoutDependentOperations(MiddleReplacementPattern):
         return [MiddleStart]
 
     def find_and_replace_pattern(self, graph: Graph):
-        for node in list(graph.nodes()):
-            node = Node(graph, node)
+        for node in graph.get_op_nodes():
             node_name = node.soft_get('name', node.id)
             # Check that node layout mismatch with graph layout
             # For example: NHWC and NCHW or NCDHW and NDHWC
-            if node.kind == 'op' and node.has_valid('layout') and node.layout != indices_mapping[len(node.layout)][
-                graph.graph['layout']]:
+            if node.has_valid('layout') and node.layout != indices_mapping[len(node.layout)][graph.graph['layout']]:
                 input = node.in_node()
                 output = node.out_node()
 
@@ -54,10 +53,10 @@ class ConvertLayoutDependentOperations(MiddleReplacementPattern):
 
                 # Schematic representation of transformation below
                 #
-                #                                           \            NCHW                              NCHW
-                #            NHWC                        --  \            |  permutation       permutation  |
-                #   data-->Convolution(example)-->data   --  /            |      |       NCHW      |        |
-                #                                           /   data->Transpose->data->Convolution->data->Transpose->data
+                #                                          \            NCHW                              NCHW
+                #            NHWC                       --  \            |  permutation       permutation  |
+                #   data-->Convolution(example)-->data  --  /            |      |       NCHW      |        |
+                #                                          /   data->Transpose->data->Convolution->data->Transpose->data
 
                 # 1. Insert input Transpose
                 #    This Transpose will permute input from original input layout to operation layout
@@ -83,9 +82,8 @@ class ConvertLayoutDependentOperations(MiddleReplacementPattern):
                 output_permute_name = node_name + '/output_transpose'
                 output_order_const = Const(graph, {'name': output_permute_name + '/order',
                                                    'value': permutation.inv}).create_node_with_data()
-                output_permute_op = Transpose(graph, {'name': output_permute_name}
-                                              ).create_node_with_data([input_data_node, output_order_const],
-                                                                      data_nodes=output)
+                Transpose(graph, {'name': output_permute_name}).\
+                    create_node_with_data([input_data_node, output_order_const], data_nodes=output)
 
                 # 3. Add permutations for Node
                 #    Here we use permutation mechanism where data nodes takes permutation attribute.

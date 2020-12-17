@@ -34,7 +34,8 @@ class ApplyPermutation(MiddleReplacementPattern):
     enabled = True
     force_clean_up = True
     # can't be turned on for Kaldi until permutation logic will be aligned
-    graph_condition = [lambda graph: graph.graph['fw'] != 'kaldi']
+    graph_condition = [lambda graph: graph.graph['fw'] != 'kaldi',
+                       lambda graph: not graph.graph['cmd_params'].experimental_layout_change]
 
     def run_after(self):
         return [ApplyNHWCtoNCHWpermutation, PostMiddleStart]

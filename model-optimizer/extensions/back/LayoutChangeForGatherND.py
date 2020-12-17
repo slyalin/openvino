@@ -29,7 +29,8 @@ class LayoutChangeForGatherND(BackReplacementPattern):
     """
     enabled = True
     force_shape_inference = True
-    graph_condition = [lambda graph: graph.graph['fw'] == 'tf']
+    graph_condition = [lambda graph: graph.graph['fw'] == 'tf',
+                       lambda graph: not graph.graph['cmd_params'].experimental_layout_change]
 
     @staticmethod
     def insert_transpose(graph: Graph, input_port: Port, before_input=True):

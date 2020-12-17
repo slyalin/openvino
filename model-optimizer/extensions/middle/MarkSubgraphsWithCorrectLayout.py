@@ -22,7 +22,6 @@ from extensions.middle.InsertLayoutPropagationTransposes import InsertLayoutProp
     mark_as_correct_data_layout, mark_output_as_in_correct_layout, mark_input_as_in_correct_layout
 from extensions.middle.LayoutChangeForConstantShapePaths import LayoutChangeForConstantShapePaths
 from extensions.middle.pass_separator import PostMiddleStart
-from mo.front.common.partial_infer.utils import int64_array
 from mo.graph.graph import Graph, Node
 from mo.graph.perm_inputs import PermuteInputs
 from mo.graph.port import Port
@@ -39,7 +38,8 @@ class MarkSubGraphsWithCorrectLayout(MiddleReplacementPattern):
     3. Marks nodes along the weight path of convolutions as in correct layout to not permute them from NHWC to NCHW
     """
     enabled = True
-    graph_condition = [lambda graph: graph.graph['layout'] == 'NHWC']
+    graph_condition = [lambda graph: graph.graph['layout'] == 'NHWC',
+                       lambda graph: not graph.graph['cmd_params'].experimental_layout_change]
     op_conditions = [lambda n: n.soft_get('op') == 'MatMul' and
                                any([len(port.data.get_shape()) in (4, 5) for port in n.in_ports().values()]),
                      ]
