@@ -25,6 +25,7 @@
 #include "transformations/common_optimizations/hsigmoid_fusion.hpp"
 #include "transformations/common_optimizations/hswish_fusion.hpp"
 #include "transformations/common_optimizations/convert_quantize_dequantize.hpp"
+#include "transformations/common_optimizations/transpose_sinking.h"
 #include "transformations/op_conversions/bidirectional_sequences_decomposition.hpp"
 #include "transformations/op_conversions/convert_pad_to_group_conv.hpp"
 #include "transformations/op_conversions/convert_divide.hpp"
@@ -60,6 +61,7 @@ bool ngraph::pass::CommonOptimizations::run_on_function(std::shared_ptr<ngraph::
     manager.register_pass<ngraph::pass::RemoveFilteringBoxesBySize>(); // Resolves dynamism (replaces NonZero), CF needed
     manager.register_pass<ngraph::pass::ConvertQuantizeDequantize>();
     manager.register_pass<ngraph::pass::ConstantFolding>();
+    manager.register_pass<tensorflow::ngraph_bridge::pass::TransposeSinking>();
     manager.register_pass<ngraph::pass::StridedSliceOptimization>(); // depends on CF
     manager.register_pass<ngraph::pass::AlgebraicSimplification>(); // may introduce fake dynamism
     manager.register_pass<ngraph::pass::NopElimination>(); // may introduce fake dynamism

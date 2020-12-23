@@ -531,9 +531,10 @@ def get_tf_cli_parser(parser: argparse.ArgumentParser = None):
                           help='Disables default translation from NHWC to NCHW',
                           action='store_true')
     tf_group.add_argument('--experimental_layout_change',
-                          help='Perform layout change from NHWC to NCHW using experimental approach.',
-                          action='store_true',
-                          default=False)
+                          help='By default this version of MO uses experimental approach for layout normalization. ' +
+                               'By providing this option, MO switches to the standard approach.',
+                          action='store_false',
+                          default=True)
     return parser
 
 
