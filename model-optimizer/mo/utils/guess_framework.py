@@ -35,9 +35,9 @@ def deduce_framework_by_namespace(argv: Namespace):
             argv.framework = guess_framework_by_ext(argv.input_model)
         if not argv.framework:
             raise Error('Framework name can not be deduced from the given options: {}={}. Use --framework to choose '
-                        'one of caffe, tf, mxnet, kaldi, onnx', '--input_model', argv.input_model, refer_to_faq_msg(15))
+                        'one of caffe, tf, mxnet, kaldi, onnx, paddlepaddle', '--input_model', argv.input_model, refer_to_faq_msg(15))
 
-    return map(lambda x: argv.framework == x, ['tf', 'caffe', 'mxnet', 'kaldi', 'onnx'])
+    return map(lambda x: argv.framework == x, ['tf', 'caffe', 'mxnet', 'kaldi', 'onnx',  'pdpd'])
 
 
 def guess_framework_by_ext(input_model_path: str) -> int:
@@ -55,3 +55,5 @@ def guess_framework_by_ext(input_model_path: str) -> int:
         return 'kaldi'
     elif re.match('^.*\.onnx$', input_model_path):
         return 'onnx'
+    elif re.match('^.*\.pdmodel$', input_model_path):
+        return 'pdpd'        
