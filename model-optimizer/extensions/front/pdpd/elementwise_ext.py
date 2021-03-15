@@ -30,6 +30,6 @@ class AddFrontExtractor(FrontExtractorOp):
 
     @classmethod
     def extract(cls, node: Node):
-        axis = node.pb.attr('axis')
+        axis = node.pb['op'].attr('axis')
         Add.update_node_stat(node, {'axis': axis})
         return cls.enabled

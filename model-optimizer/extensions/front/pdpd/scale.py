@@ -27,8 +27,8 @@ class ScaleFrontExtractor(FrontExtractorOp):
 
     @classmethod
     def extract(cls, node):
-        scale = node.pb.attr('scale')
-        bias = node.pb.attr('bias')
+        scale = node.pb['op'].attr('scale')
+        bias = node.pb['op'].attr('bias')
 
         node['scale'] = scale
         node['bias'] = bias
