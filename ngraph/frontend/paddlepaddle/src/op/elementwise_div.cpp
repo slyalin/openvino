@@ -15,14 +15,14 @@
 //*****************************************************************************
 
 #include <ngraph/opsets/opset6.hpp>
-#include "elementwise_add.hpp"
+#include "elementwise_div.hpp"
 
 namespace ngraph {
 namespace frontend {
 namespace pdpd {
 namespace op {
 
-OutputVector elementwise_add (const NodeContext& node) {
+OutputVector elementwise_div (const NodeContext& node) {
     auto x = node.get_ng_input("X");
     auto y = node.get_ng_input("Y");
 
@@ -32,7 +32,7 @@ OutputVector elementwise_add (const NodeContext& node) {
     auto y_shape = y.get_shape();
 
     if ((axis == -1) || (axis == x_shape.size() - 1) || (x_shape.size() == y_shape.size())) {
-        return {std::make_shared<ngraph::opset6::Add>(x, y)};
+        return {std::make_shared<ngraph::opset6::Divide>(x, y)};
     }
     else {
         auto broadcast_shape = Shape(x_shape.size(), 1);
@@ -44,8 +44,8 @@ OutputVector elementwise_add (const NodeContext& node) {
 
         auto broadcast_shape_node = ngraph::opset6::Constant::create(ngraph::element::i64, ngraph::Shape{broadcast_shape.size()}, broadcast_shape);    
         auto y_node = std::make_shared<ngraph::opset6::Reshape>(y, broadcast_shape_node, false);    
-        return {std::make_shared<ngraph::opset6::Add>(x, y_node)};             
-    }   
+        return {std::make_shared<ngraph::opset6::Divide>(x, y_node)};             
+    }       
 }
 
 }}}}

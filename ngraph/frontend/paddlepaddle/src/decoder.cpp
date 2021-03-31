@@ -69,6 +69,27 @@ int DecoderPDPDProto::get_int(const std::string& name, int def) const
     }
 }
 
+std::vector<float> DecoderPDPDProto::get_floats(const std::string& name, const std::vector<float>& def) const
+{
+    std::vector<proto::OpDesc_Attr> attrs;
+    for (const auto &attr : op.attrs()) {
+        if (attr.name() == name) {
+            attrs.push_back(attr);
+            std::cout << attr.type() << std::endl;
+        }
+    }
+    if (attrs.size() == 0) {
+        return def;
+    } else if (attrs.size() > 1) {
+        // TODO: raise exception here
+        return def;
+    } else {
+        std::vector<float> res;
+        std::copy(attrs[0].floats().begin(), attrs[0].floats().end(), std::back_inserter(res));
+        return res;
+    }
+}
+
 float DecoderPDPDProto::get_float(const std::string& name, float def) const
 {
     std::vector<proto::OpDesc_Attr> attrs;

@@ -22,6 +22,11 @@
 #include "op/elementwise_add.hpp"
 #include "op/mul.hpp"
 #include "op/scale.hpp"
+#include "op/leakyrelu.hpp"
+#include "op/interp.hpp"
+#include "op/concat.hpp"
+#include "op/elementwise_div.hpp"
+#include "op/cast.hpp"
 
 #include "op_table.hpp"
 
@@ -39,6 +44,11 @@ std::map<std::string, CreatorFunction> get_supported_ops() {
             {"elementwise_add", op::elementwise_add},
             {"mul", op::mul},
             {"scale", op::scale},
+            {"leaky_relu", op::leakyrelu},
+            {"nearest_interp_v2", op::interp},
+            {"concat", op::concat},
+            {"elementwise_div", op::elementwise_div},
+            {"cast", op::cast}
     };
 };
 
