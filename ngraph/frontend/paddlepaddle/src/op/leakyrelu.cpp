@@ -22,7 +22,7 @@ namespace frontend {
 namespace pdpd {
 namespace op {
 
-OutputVector leakyrelu (const NodeContext& node) {
+OutputVector leaky_relu (const NodeContext& node) {
     auto data = node.get_ng_input("X");
     auto alpha = ngraph::opset6::Constant::create(ngraph::element::f32, {1}, {node.get_attribute<float>("alpha")});
     return {std::make_shared<ngraph::opset6::PRelu>(data, alpha)};     

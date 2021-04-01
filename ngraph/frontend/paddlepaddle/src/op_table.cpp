@@ -49,8 +49,8 @@ std::map<std::string, CreatorFunction> get_supported_ops() {
             {"elementwise_pow", op::elementwise_pow},
             {"mul", op::mul},
             {"scale", op::scale},
-            {"leaky_relu", op::leakyrelu},
-            {"nearest_interp_v2", op::interp},
+            {"leaky_relu", op::leaky_relu},
+            {"nearest_interp_v2", op::nearest_interp_v2},
             {"concat", op::concat},
             {"cast", op::cast}
     };

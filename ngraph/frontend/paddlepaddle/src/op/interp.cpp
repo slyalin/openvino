@@ -22,7 +22,7 @@ namespace frontend {
 namespace pdpd {
 namespace op {
 
-OutputVector interp (const NodeContext& node) {
+OutputVector nearest_interp_v2 (const NodeContext& node) {
     auto x = node.get_ng_input("X");
 
     using InterpolateMode = ngraph::opset6::Interpolate::InterpolateMode;
