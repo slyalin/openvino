@@ -23,5 +23,10 @@ namespace pdpd {
 namespace op {
 
 OutputVector elementwise_add (const NodeContext& node_context);
+OutputVector elementwise_sub (const NodeContext& node_context);
+OutputVector elementwise_mul (const NodeContext& node_context);
 OutputVector elementwise_div (const NodeContext& node_context);
+OutputVector elementwise_min (const NodeContext& node_context);
+OutputVector elementwise_max (const NodeContext& node_context);
+OutputVector elementwise_pow (const NodeContext& node_context);
 }}}}

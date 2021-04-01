@@ -41,12 +41,17 @@ std::map<std::string, CreatorFunction> get_supported_ops() {
             {"relu", op::relu},
             {"pool2d", op::pool2d},
             {"elementwise_add", op::elementwise_add},
+            {"elementwise_sub", op::elementwise_sub},
+            {"elementwise_mul", op::elementwise_mul},
+            {"elementwise_div", op::elementwise_div},
+            {"elementwise_min", op::elementwise_min},
+            {"elementwise_max", op::elementwise_max},
+            {"elementwise_pow", op::elementwise_pow},
             {"mul", op::mul},
             {"scale", op::scale},
             {"leaky_relu", op::leakyrelu},
             {"nearest_interp_v2", op::interp},
             {"concat", op::concat},
-            {"elementwise_div", op::elementwise_div},
             {"cast", op::cast}
     };
 };

@@ -55,8 +55,28 @@ OutputVector elementwise_add (const NodeContext& node_context) {
     return elementwise_ops(node_context, ngraph::opset6::Add());
 }
 
+OutputVector elementwise_sub (const NodeContext& node_context) {
+    return elementwise_ops(node_context, ngraph::opset6::Subtract());
+}
+
+OutputVector elementwise_mul (const NodeContext& node_context) {
+    return elementwise_ops(node_context, ngraph::opset6::Multiply());
+}
+
 OutputVector elementwise_div (const NodeContext& node_context) {
     return elementwise_ops(node_context, ngraph::opset6::Divide());
+}
+
+OutputVector elementwise_min (const NodeContext& node_context) {
+    return elementwise_ops(node_context, ngraph::opset6::Minimum());
+}
+
+OutputVector elementwise_max (const NodeContext& node_context) {
+    return elementwise_ops(node_context, ngraph::opset6::Maximum());
+}
+
+OutputVector elementwise_pow (const NodeContext& node_context) {
+    return elementwise_ops(node_context, ngraph::opset6::Power());
 }
 
 }}}}
