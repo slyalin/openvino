@@ -47,6 +47,7 @@ set(SRC
     eval.cpp
     file_util.cpp
     float16.cpp
+    frontend/frontend_manager.cpp
     graph_rewrite.cpp
     includes.cpp
     input_output_assign.cpp
@@ -443,6 +444,7 @@ add_executable(unit-test ${SRC})
 
 target_include_directories(unit-test PRIVATE ".")
 target_include_directories(unit-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/runtime)
+target_include_directories(unit-test PRIVATE ${FRONTEND_INCLUDE_PATH})
 
 add_definitions("-DCURDIR=\"${CMAKE_CURRENT_SOURCE_DIR}\"")
 add_definitions("-DJSON_INCLUDES=\"${JSON_INCLUDE_DIR}\"")
@@ -492,7 +494,7 @@ if (MSVC)
     target_compile_options(unit-test PRIVATE "/bigobj")
 endif()
 
-target_link_libraries(unit-test PRIVATE ie_backend)
+target_link_libraries(unit-test PRIVATE ie_backend frontend_manager)
 
 if (NGRAPH_ONNX_IMPORT_ENABLE)
     target_link_libraries(unit-test PRIVATE onnx_importer onnx_editor)
