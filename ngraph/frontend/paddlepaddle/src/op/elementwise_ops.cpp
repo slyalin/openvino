@@ -24,7 +24,7 @@ namespace pdpd {
 namespace op {
 
 template <typename T>
-OutputVector elementwise_ops (const NodeContext& node, const T& def = T()) { 
+OutputVector elementwise_ops (const NodeContext& node) { 
     auto x = node.get_ng_input("X");
     auto y = node.get_ng_input("Y");    
 
@@ -52,31 +52,31 @@ OutputVector elementwise_ops (const NodeContext& node, const T& def = T()) {
 
 //
 OutputVector elementwise_add (const NodeContext& node_context) {
-    return elementwise_ops(node_context, ngraph::opset6::Add());
+    return elementwise_ops<ngraph::opset6::Add>(node_context);
 }
 
 OutputVector elementwise_sub (const NodeContext& node_context) {
-    return elementwise_ops(node_context, ngraph::opset6::Subtract());
+    return elementwise_ops<ngraph::opset6::Subtract>(node_context);
 }
 
 OutputVector elementwise_mul (const NodeContext& node_context) {
-    return elementwise_ops(node_context, ngraph::opset6::Multiply());
+    return elementwise_ops<ngraph::opset6::Multiply>(node_context);
 }
 
 OutputVector elementwise_div (const NodeContext& node_context) {
-    return elementwise_ops(node_context, ngraph::opset6::Divide());
+    return elementwise_ops<ngraph::opset6::Divide>(node_context);
 }
 
 OutputVector elementwise_min (const NodeContext& node_context) {
-    return elementwise_ops(node_context, ngraph::opset6::Minimum());
+    return elementwise_ops<ngraph::opset6::Minimum>(node_context);
 }
 
 OutputVector elementwise_max (const NodeContext& node_context) {
-    return elementwise_ops(node_context, ngraph::opset6::Maximum());
+    return elementwise_ops<ngraph::opset6::Maximum>(node_context);
 }
 
 OutputVector elementwise_pow (const NodeContext& node_context) {
-    return elementwise_ops(node_context, ngraph::opset6::Power());
+    return elementwise_ops<ngraph::opset6::Power>(node_context);
 }
 
 }}}}
