@@ -32,6 +32,12 @@ std::map<paddle::framework::proto::VarType_Type, ngraph::element::Type> TYPE_MAP
         {proto::VarType_Type::VarType_Type_BF16,  ngraph::element::bf16}
 };
 
+ngraph::element::Type DecoderPDPDProto::get_dtype(const std::string& name, ngraph::element::Type def) const
+{
+    auto dtype = (paddle::framework::proto::VarType_Type)std::stoi(name);
+    return TYPE_MAP[dtype];
+}
+
 std::vector<int32_t> DecoderPDPDProto::get_ints(const std::string& name, const std::vector<int32_t>& def) const
 {
     std::cout << "Running get_ints" << std::endl;

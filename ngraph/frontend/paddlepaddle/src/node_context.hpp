@@ -96,6 +96,9 @@ template <>
 inline bool NodeContext::get_attribute (const std::string& name, const bool& def) const
 { return node.get_bool(name, def); }
 
+template <>
+inline ngraph::element::Type NodeContext::get_attribute (const std::string& name, const ngraph::element::Type& def) const
+{ return node.get_dtype(name, def); }
 
 }
 }

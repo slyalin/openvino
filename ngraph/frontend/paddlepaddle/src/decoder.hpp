@@ -61,6 +61,7 @@ public:
     bool get_bool (const std::string& name, bool def = false) const;
 
     // TODO: Further populate get_XXX methods on demand
+    ngraph::element::Type get_dtype(const std::string& name, ngraph::element::Type def) const;
 };
 
 }
