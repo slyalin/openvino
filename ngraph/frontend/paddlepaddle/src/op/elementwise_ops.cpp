@@ -30,22 +30,26 @@ OutputVector elementwise_ops (const NodeContext& node) {
 
     auto axis = node.get_attribute<int>("axis");
 
-    auto x_shape = x.get_shape();
-    auto y_shape = y.get_shape();
+    MY_ASSERT(x.get_partial_shape().rank().is_static());
+    MY_ASSERT(y.get_partial_shape().rank().is_static());
+    int64_t x_rank = x.get_partial_shape().rank().get_length();
+    int64_t y_rank = y.get_partial_shape().rank().get_length();
 
-    if ((axis == -1) || (axis == x_shape.size() - 1) || (x_shape.size() == y_shape.size())) {
+    if ((axis == -1) || (axis == x_rank - 1) || (x_rank == y_rank)) {
         return {std::make_shared<T>(x, y)};
     }
     else {
-        auto broadcast_shape = Shape(x_shape.size(), 1);
-        int32_t idx = 0;
-        for(auto it = y_shape.begin(); it != y_shape.end(); ++it, idx++)
-            broadcast_shape[axis+idx] = *it;
+        // This broadcast can be implemented by either ngraph::Reshape or ngraph::Broadcast.
+        // Since PDPD implicates y_shape is a subsequence of x_shape starting from axis, 
+        // to use ngraph::Reshape like Paddle2ONNX, which is more friendly to PnP.
+        auto broadcast_shape = std::vector<int64_t>(x_rank, 1);
+        PartialShape y_shape = y.get_partial_shape();
+        int32_t i = 0;
+        for(auto it = y_shape.begin(); it != y_shape.end(); ++i,++it)
+            broadcast_shape[axis+i] = (*it).get_length();
 
-        std::cout << broadcast_shape << std::endl;
-
-        auto broadcast_shape_node = ngraph::opset6::Constant::create(ngraph::element::i64, ngraph::Shape{broadcast_shape.size()}, broadcast_shape);    
-        auto y_node = std::make_shared<ngraph::opset6::Reshape>(y, broadcast_shape_node, false);    
+        auto reshape_node = ngraph::opset6::Constant::create(ngraph::element::i64, ngraph::Shape{broadcast_shape.size()}, broadcast_shape);    
+        auto y_node = std::make_shared<ngraph::opset6::Reshape>(y, reshape_node, false);    
         return {std::make_shared<T>(x, y_node)};             
     }   
 }
