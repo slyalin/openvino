@@ -15,6 +15,7 @@
  *******************************************************************************/
 #include <numeric>
 
+#include <numeric>
 #include "graph.pb.h"
 #include "tensor.pb.h"
 
