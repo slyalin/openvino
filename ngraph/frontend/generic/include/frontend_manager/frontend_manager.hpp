@@ -77,6 +77,8 @@ public:
 
     typedef std::shared_ptr<Place> Ptr;
 
+    virtual ~Place() = default;
+
     /// \brief All associated names (synonyms) that identify this place in the graph in a framework specific way
     /// \return A vector of strings each representing a name that identifies this place in the graph.
     ///         Can be empty if there are no names associated with this place or name cannot be attached.
@@ -158,6 +160,7 @@ public:
 
     typedef std::shared_ptr<InputModel> Ptr;
 
+    virtual ~InputModel() = default;
 
     /////  Searching for places  /////
 
@@ -270,6 +273,7 @@ class NGRAPH_API FrontEnd
 {
 public:
     typedef std::shared_ptr<FrontEnd> Ptr;
+    virtual ~FrontEnd() = default;
 
     virtual InputModel::Ptr loadFromFile (const std::string& path) const;
     virtual InputModel::Ptr loadFromFiles (const std::vector<std::string>& paths) const;

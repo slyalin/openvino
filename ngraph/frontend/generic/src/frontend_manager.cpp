@@ -490,6 +490,12 @@ namespace ngraph
         {
             return m_impl->availableFrontEnds();
         }
+
+        void FrontEndManager::registerFrontEnd(const std::string& name, FrontEndFactory creator)
+        {
+            m_impl->registerFrontEnd(name, creator);
+        }
+
     } // namespace frontend
 
 } // namespace ngraph

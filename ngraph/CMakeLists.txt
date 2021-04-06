@@ -26,6 +26,10 @@ set(NGRAPH_INCLUDE_PATH
     ${CMAKE_CURRENT_SOURCE_DIR}/core/include
 )
 
+set(FRONTEND_INCLUDE_PATH
+    ${CMAKE_CURRENT_SOURCE_DIR}/frontend/generic/include
+)
+
 if (APPLE)
     # Enable MACOS_RPATH by default.
     cmake_policy(SET CMP0042 NEW)
