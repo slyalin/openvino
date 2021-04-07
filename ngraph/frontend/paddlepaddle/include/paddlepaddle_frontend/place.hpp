@@ -26,5 +26,38 @@ class PlacePDPD : public Place
     // TODO
 };
 
+class InPortPlacePDPD : public PlacePDPD
+{
+    // TODO
+};
+
+class OutPortPlacePDPD : public PlacePDPD
+{
+    // TODO
+};
+
+class VarPlacePDPD;
+class OpPlacePDPD : public PlacePDPD
+{
+public:
+    InputModel* model;
+    const void* op; // TODO: make it cleaner
+    std::map<std::string, std::vector<std::weak_ptr<VarPlacePDPD>>> outputs;
+    std::map<std::string, std::vector<std::weak_ptr<VarPlacePDPD>>> inputs;
+    OpPlacePDPD(const void* _op) : op(_op) {}
+};
+
+class VarPlacePDPD : public PlacePDPD
+{
+public:
+    InputModel* model;
+    const void* var; // TODO: make it cleaner
+    std::vector<std::weak_ptr<OpPlacePDPD>> producing_ops; // should never have more than 1 element
+    std::vector<std::weak_ptr<OpPlacePDPD>> consuming_ops;
+    PartialShape shape;
+    element::Type type;
+    VarPlacePDPD(const void* _var) : var(_var) {}
+};
+
 } // namespace frontend
 } // namespace ngraph
