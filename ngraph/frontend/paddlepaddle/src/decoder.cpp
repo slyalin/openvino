@@ -34,7 +34,7 @@ std::map<paddle::framework::proto::VarType_Type, ngraph::element::Type> TYPE_MAP
 
 ngraph::element::Type DecoderPDPDProto::get_dtype(const std::string& name, ngraph::element::Type def) const
 {
-    auto dtype = (paddle::framework::proto::VarType_Type)std::stoi(name);
+    auto dtype = (paddle::framework::proto::VarType_Type)get_int(name);
     return TYPE_MAP[dtype];
 }
 

@@ -24,10 +24,9 @@ namespace op {
 
 OutputVector cast (const NodeContext& node) {
     auto data = node.get_ng_input("X");
-    auto out_dtype = node.get_attribute<int>("out_dtype");
-    auto dtype = node.get_attribute<ngraph::element::Type>(std::to_string(out_dtype));
+    auto out_dtype = node.get_attribute<ngraph::element::Type>("out_dtype");
  
-    return {std::make_shared<ngraph::opset6::Convert>(data, dtype)};
+    return {std::make_shared<ngraph::opset6::Convert>(data, out_dtype)};
 }
 
 }}}}
