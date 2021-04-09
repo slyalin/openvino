@@ -13,6 +13,11 @@ namespace ngraph
     {
         namespace op
         {
+            namespace detail
+            {
+                Output<ngraph::Node> get_zero_point(const OutputVector& inputs);
+            }
+
             namespace set_1
             {
                 OutputVector dequantize_linear(const Node& node);
@@ -21,6 +26,10 @@ namespace ngraph
 
             namespace set_13
             {
+                namespace detail
+                {
+                    OutputVector dequantize_linear(Output<ngraph::Node> x, Output<ngraph::Node> scale, Output<ngraph::Node> zero_point, int64_t axis, Node node);
+                }
                 OutputVector dequantize_linear(const Node& node);
             }
 

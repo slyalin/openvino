@@ -21,7 +21,7 @@ namespace ngraph
     {
         namespace op
         {
-            namespace
+            namespace detail
             {
                 Output<ngraph::Node> get_zero_point(const OutputVector& inputs)
                 {
@@ -56,7 +56,7 @@ namespace ngraph
 
                     const auto x = inputs[0];
                     const auto scale = inputs[1];
-                    const auto zero_point = get_zero_point(inputs);
+                    const auto zero_point = detail::get_zero_point(inputs);
 
                     common::validate_scalar_input(
                         "Dequantization scale", scale.get_node_shared_ptr(), {element::f32});
@@ -72,7 +72,7 @@ namespace ngraph
 
             namespace set_13
             {
-                namespace
+                namespace detail
                 {
                     void validate_scale(const Output<ngraph::Node> scale,
                                         const Output<ngraph::Node> x,
@@ -128,6 +128,10 @@ namespace ngraph
                                                                 const int64_t axis,
                                                                 const PartialShape& x_shape)
                     {
+                        auto input_rank = input.get_partial_shape().rank();
+                        if(input_rank.is_static() && input_rank.get_length() == 0)
+                            return input.get_node_shared_ptr();
+
                         std::vector<int64_t> target_dims;
 
                         for (size_t i = 0; i < axis; ++i)
@@ -155,6 +159,29 @@ namespace ngraph
 
                         return std::make_shared<default_opset::Reshape>(input, target_shape, true);
                     }
+
+                    OutputVector dequantize_linear(Output<ngraph::Node> x, Output<ngraph::Node> scale, Output<ngraph::Node> zero_point, int64_t axis, Node node)
+                    {
+                        const auto x_shape = x.get_partial_shape();
+
+                        NGRAPH_CHECK(x_shape.rank().is_static(),
+                                     "Rank of the input data tensor has to be known (static).");
+
+                        axis = ngraph::normalize_axis(node.get_description(), axis, x_shape.rank());
+
+                        validate_scale(scale, x, axis);
+                        validate_zero_point(zero_point, x, axis);
+
+                        // these reshapes make sure that dequantization happens over the specified axis
+                        scale = reshape_input(scale, axis, x_shape);
+                        zero_point = reshape_input(zero_point, axis, x_shape);
+
+                        const auto converted_x =
+                                std::make_shared<default_opset::Convert>(x, element::f32);
+
+                        return {std::make_shared<default_opset::Multiply>(
+                                std::make_shared<default_opset::Subtract>(converted_x, zero_point), scale)};
+                    }
                 }
 
                 OutputVector dequantize_linear(const Node& node)
@@ -166,30 +193,12 @@ namespace ngraph
                                  "input. Got: ",
                                  inputs.size());
 
+
                     const auto x = inputs[0];
                     auto scale = inputs[1];
-                    auto zero_point = get_zero_point(inputs);
+                    auto zero_point = op::detail::get_zero_point(inputs);
 
-                    const auto x_shape = x.get_partial_shape();
-
-                    NGRAPH_CHECK(x_shape.rank().is_static(),
-                                 "Rank of the input data tensor has to be known (static).");
-
-                    int64_t axis{node.get_attribute_value<int64_t>("axis", 1)};
-                    axis = ngraph::normalize_axis(node.get_description(), axis, x_shape.rank());
-
-                    validate_scale(scale, x, axis);
-                    validate_zero_point(zero_point, x, axis);
-
-                    // these reshapes make sure that dequantization happens over the specified axis
-                    scale = reshape_input(scale, axis, x_shape);
-                    zero_point = reshape_input(zero_point, axis, x_shape);
-
-                    const auto converted_x =
-                        std::make_shared<default_opset::Convert>(x, element::f32);
-
-                    return {std::make_shared<default_opset::Multiply>(
-                        std::make_shared<default_opset::Subtract>(converted_x, zero_point), scale)};
+                    detail::dequantize_linear(x, scale, zero_point, node.get_attribute_value<int64_t>("axis", 1), node);
                 }
             }
         }
