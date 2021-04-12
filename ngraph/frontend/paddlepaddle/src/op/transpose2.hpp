@@ -22,6 +22,6 @@ namespace frontend {
 namespace pdpd {
 namespace op {
 
-OutputVector elementwise_add (const NodeContext& node_context);
+OutputVector transpose2 (const NodeContext& node);
 
 }}}}

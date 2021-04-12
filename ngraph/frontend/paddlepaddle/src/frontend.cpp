@@ -24,6 +24,7 @@
 #include <vector>
 #include <utility>
 #include <fstream>
+#include <numeric>
 
 #include "framework.pb.h"
 

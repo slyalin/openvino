@@ -32,6 +32,12 @@ std::map<paddle::framework::proto::VarType_Type, ngraph::element::Type> TYPE_MAP
         {proto::VarType_Type::VarType_Type_BF16,  ngraph::element::bf16}
 };
 
+ngraph::element::Type DecoderPDPDProto::get_dtype(const std::string& name, ngraph::element::Type def) const
+{
+    auto dtype = (paddle::framework::proto::VarType_Type)get_int(name);
+    return TYPE_MAP[dtype];
+}
+
 std::vector<int32_t> DecoderPDPDProto::get_ints(const std::string& name, const std::vector<int32_t>& def) const
 {
     std::cout << "Running get_ints" << std::endl;
@@ -66,6 +72,27 @@ int DecoderPDPDProto::get_int(const std::string& name, int def) const
         return def;
     } else {
         return attrs[0].i();
+    }
+}
+
+std::vector<float> DecoderPDPDProto::get_floats(const std::string& name, const std::vector<float>& def) const
+{
+    std::vector<proto::OpDesc_Attr> attrs;
+    for (const auto &attr : op.attrs()) {
+        if (attr.name() == name) {
+            attrs.push_back(attr);
+            std::cout << attr.type() << std::endl;
+        }
+    }
+    if (attrs.size() == 0) {
+        return def;
+    } else if (attrs.size() > 1) {
+        // TODO: raise exception here
+        return def;
+    } else {
+        std::vector<float> res;
+        std::copy(attrs[0].floats().begin(), attrs[0].floats().end(), std::back_inserter(res));
+        return res;
     }
 }
 

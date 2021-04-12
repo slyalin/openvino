@@ -15,18 +15,17 @@
 //*****************************************************************************
 
 #include <ngraph/opsets/opset6.hpp>
-#include "elementwise_add.hpp"
+#include "concat.hpp"
 
 namespace ngraph {
 namespace frontend {
 namespace pdpd {
 namespace op {
 
-OutputVector elementwise_add (const NodeContext& node) {
-    auto x = node.get_ng_input("X");
-    auto y = node.get_ng_input("Y");
-    // TODO : resolve broadcast
-    return {std::make_shared<ngraph::opset6::Add>(x, y)};
+OutputVector concat (const NodeContext& node) {
+    auto data = node.get_ng_inputs("X");
+    auto axis = node.get_attribute<int>("axis");
+    return {std::make_shared<ngraph::opset6::Concat>(data, axis)};
 }
 
 }}}}

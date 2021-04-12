@@ -89,9 +89,16 @@ inline std::vector<int32_t> NodeContext::get_attribute (const std::string& name,
 { return node.get_ints(name, def); }
 
 template <>
+inline std::vector<float> NodeContext::get_attribute (const std::string& name, const std::vector<float>& def) const
+{ return node.get_floats(name, def); }
+
+template <>
 inline bool NodeContext::get_attribute (const std::string& name, const bool& def) const
 { return node.get_bool(name, def); }
 
+template <>
+inline ngraph::element::Type NodeContext::get_attribute (const std::string& name, const ngraph::element::Type& def) const
+{ return node.get_dtype(name, def); }
 
 }
 }
