@@ -45,14 +45,29 @@ void FrontEndCutModelTest::doLoadFromFile() {
     ASSERT_NE(m_inputModel, nullptr);
 }
 
+std::vector<ngraph::frontend::Place::Ptr> FrontEndCutModelTest::constructNewInputs() const {
+    std::vector<Place::Ptr> newInputs;
+    for (const auto& name : m_param.m_newInputs) {
+        newInputs.push_back(m_inputModel->getPlaceByTensorName(name));
+    }
+    return newInputs;
+}
+
+std::vector<ngraph::frontend::Place::Ptr> FrontEndCutModelTest::constructNewOutputs() const {
+    std::vector<Place::Ptr> newOutputs;
+    for (const auto& name : m_param.m_newOutputs) {
+        newOutputs.push_back(m_inputModel->getPlaceByTensorName(name));
+    }
+    return newOutputs;
+}
+
+///////////////////////////////////////////////////////////////////
+
 TEST_P(FrontEndCutModelTest, testOverrideInputs)
 {
     ASSERT_NO_THROW(doLoadFromFile());
     std::vector<Place::Ptr> newPlaces;
-    for (const auto& name : m_param.m_newInputs) {
-        ASSERT_FALSE(name.empty());
-        ASSERT_NO_THROW(newPlaces.push_back(m_inputModel->getPlaceByTensorName(name)));
-    }
+    ASSERT_NO_THROW(newPlaces = constructNewInputs());
     ASSERT_NO_THROW(m_inputModel->overrideAllInputs(newPlaces));
     ASSERT_NO_THROW(m_inputModel->getInputs());
     EXPECT_EQ(m_param.m_newInputs.size(), m_inputModel->getInputs().size());
@@ -73,10 +88,7 @@ TEST_P(FrontEndCutModelTest, testOverrideOutputs)
 {
     ASSERT_NO_THROW(doLoadFromFile());
     std::vector<Place::Ptr> newPlaces;
-    for (const auto& name : m_param.m_newOutputs) {
-        ASSERT_FALSE(name.empty());
-        ASSERT_NO_THROW(newPlaces.push_back(m_inputModel->getPlaceByTensorName(name)));
-    }
+    ASSERT_NO_THROW(newPlaces = constructNewOutputs());
     ASSERT_NO_THROW(m_inputModel->overrideAllOutputs(newPlaces));
     ASSERT_NO_THROW(m_inputModel->getOutputs());
     EXPECT_EQ(m_param.m_newOutputs.size(), m_inputModel->getOutputs().size());
@@ -93,7 +105,7 @@ TEST_P(FrontEndCutModelTest, testOverrideOutputs)
     }
 }
 
-TEST_P(FrontEndCutModelTest, testConv2D_oldInputs) {
+TEST_P(FrontEndCutModelTest, testOldInputs) {
     ASSERT_NO_THROW(doLoadFromFile());
     std::shared_ptr<ngraph::Function> function;
     ASSERT_NO_THROW(function = m_frontEnd->convert(m_inputModel));
@@ -108,7 +120,7 @@ TEST_P(FrontEndCutModelTest, testConv2D_oldInputs) {
     }
 }
 
-TEST_P(FrontEndCutModelTest, testConv2D_oldOutputs) {
+TEST_P(FrontEndCutModelTest, testOldOutputs) {
     ASSERT_NO_THROW(doLoadFromFile());
     std::shared_ptr<ngraph::Function> function;
     ASSERT_NO_THROW(function = m_frontEnd->convert(m_inputModel));
@@ -122,20 +134,17 @@ TEST_P(FrontEndCutModelTest, testConv2D_oldOutputs) {
     }
 }
 
-TEST_P(FrontEndCutModelTest, testConv2D_newInputs) {
+TEST_P(FrontEndCutModelTest, testNewInputs_func) {
     ASSERT_NO_THROW(doLoadFromFile());
     std::vector<Place::Ptr> newPlaces;
-    for (const auto& name : m_param.m_newInputs) {
-        ASSERT_FALSE(name.empty());
-        ASSERT_NO_THROW(newPlaces.push_back(m_inputModel->getPlaceByTensorName(name)));
-    }
+    ASSERT_NO_THROW(newPlaces = constructNewInputs());
     ASSERT_NO_THROW(m_inputModel->overrideAllInputs(newPlaces));
 
     std::shared_ptr<ngraph::Function> function;
     ASSERT_NO_THROW(function = m_frontEnd->convert(m_inputModel));
     auto ops = function->get_ordered_ops();
 
-    // Ensure that it doesn't expected old inputs
+    // Ensure that it doesn't contain old inputs
     for (const auto &name : m_param.m_oldInputs) {
         EXPECT_TRUE(std::find_if(ops.begin(), ops.end(),
                                  [&](const std::shared_ptr<ngraph::Node>& node) {
@@ -152,20 +161,17 @@ TEST_P(FrontEndCutModelTest, testConv2D_newInputs) {
     }
 }
 
-TEST_P(FrontEndCutModelTest, testConv2D_newOutputs) {
+TEST_P(FrontEndCutModelTest, testNewOutputs_func) {
     ASSERT_NO_THROW(doLoadFromFile());
     std::vector<Place::Ptr> newPlaces;
-    for (const auto& name : m_param.m_newOutputs) {
-        ASSERT_FALSE(name.empty());
-        ASSERT_NO_THROW(newPlaces.push_back(m_inputModel->getPlaceByTensorName(name)));
-    }
+    ASSERT_NO_THROW(newPlaces = constructNewOutputs());
     ASSERT_NO_THROW(m_inputModel->overrideAllInputs(newPlaces));
 
     std::shared_ptr<ngraph::Function> function;
     ASSERT_NO_THROW(function = m_frontEnd->convert(m_inputModel));
     auto ops = function->get_ordered_ops();
 
-    // Ensure that it doesn't expected old inputs
+    // Ensure that it doesn't contain old outputs
     for (const auto& name : m_param.m_oldOutputs) {
         EXPECT_TRUE(std::find_if(ops.begin(), ops.end(),
                                  [&](const std::shared_ptr<ngraph::Node>& node) {
@@ -173,7 +179,35 @@ TEST_P(FrontEndCutModelTest, testConv2D_newOutputs) {
                                  }) == ops.end()) << "Name shall not exist:" << name;
     }
 
-    // Ensure that it contains expected new inputs
+    // Ensure that it contains expected new outputs
+    for (const auto& name : m_param.m_newOutputs) {
+        EXPECT_TRUE(std::find_if(ops.begin(), ops.end(),
+                                 [&](const std::shared_ptr<ngraph::Node>& node) {
+                                     return node->get_friendly_name().find(name) != std::string::npos;
+                                 }) != ops.end()) << "Name not found:" << name;
+    }
+}
+
+TEST_P(FrontEndCutModelTest, testExtractSubgraph) {
+    ASSERT_NO_THROW(doLoadFromFile());
+    std::vector<Place::Ptr> newInputs, newOutputs;
+    ASSERT_NO_THROW(newInputs = constructNewOutputs());
+    ASSERT_NO_THROW(newOutputs = constructNewOutputs());
+    ASSERT_NO_THROW(m_inputModel->extractSubgraph(newInputs, newOutputs));
+
+    std::shared_ptr<ngraph::Function> function;
+    ASSERT_NO_THROW(function = m_frontEnd->convert(m_inputModel));
+    auto ops = function->get_ordered_ops();
+
+    // Ensure that it doesn't expected old outputs
+    for (const auto& name : m_param.m_oldOutputs) {
+        EXPECT_TRUE(std::find_if(ops.begin(), ops.end(),
+                                 [&](const std::shared_ptr<ngraph::Node>& node) {
+                                     return node->get_friendly_name().find(name) != std::string::npos;
+                                 }) == ops.end()) << "Name shall not exist:" << name;
+    }
+
+    // Ensure that it contains expected new outputs
     for (const auto& name : m_param.m_newOutputs) {
         EXPECT_TRUE(std::find_if(ops.begin(), ops.end(),
                                  [&](const std::shared_ptr<ngraph::Node>& node) {

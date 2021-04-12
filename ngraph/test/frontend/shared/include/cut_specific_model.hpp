@@ -31,4 +31,6 @@ public:
 protected:
     void initParamTest();
     void doLoadFromFile();
+    std::vector<ngraph::frontend::Place::Ptr> constructNewInputs() const;
+    std::vector<ngraph::frontend::Place::Ptr> constructNewOutputs() const;
 };
