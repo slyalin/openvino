@@ -198,7 +198,7 @@ namespace ngraph
                     auto scale = inputs[1];
                     auto zero_point = op::detail::get_zero_point(inputs);
 
-                    detail::dequantize_linear(x, scale, zero_point, node.get_attribute_value<int64_t>("axis", 1), node);
+                    return detail::dequantize_linear(x, scale, zero_point, node.get_attribute_value<int64_t>("axis", 1), node);
                 }
             }
         }
