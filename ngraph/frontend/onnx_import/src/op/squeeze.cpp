@@ -43,7 +43,7 @@ namespace ngraph
                     {
                         std::vector<int64_t> axes{};
                         auto axes_node = std::make_shared<default_opset::Constant>(
-                            element::Type_t::u64, Shape{}, axes);
+                            element::Type_t::u64, Shape{0}, axes);
 
                         return {std::make_shared<default_opset::Squeeze>(inputs.at(0), axes_node)};
                     }
