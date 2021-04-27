@@ -175,64 +175,77 @@ namespace ngraph
 
             namespace set_13
             {
-                OutputVector quantize_linear(const Node& node)
+                namespace detail
                 {
-                    OutputVector inputs{node.get_ng_inputs()};
-                    auto x = inputs.at(0);
-                    auto y_scale = inputs.at(1);
-                    auto y_zero_point = detail::get_zero_point(inputs);
+                    OutputVector quantize_linear(Output<ngraph::Node> x, Output<ngraph::Node> y_scale,
+                                                 Output<ngraph::Node> y_zero_point, int64_t axis, Node node) {
+                        namespace detail = ngraph::onnx_import::op::detail;
 
-                    x = detail::validate_data(node, x);
-                    detail::validate_zero_point_type(node, y_zero_point);
-                    y_scale = detail::validate_scale(node, y_scale);
+                        x = detail::validate_data(node, x);
+                        detail::validate_zero_point_type(node, y_zero_point);
+                        y_scale = detail::validate_scale(node, y_scale);
 
-                    const auto& x_shape = x.get_partial_shape();
+                        const auto &x_shape = x.get_partial_shape();
 
-                    int64_t axis{node.get_attribute_value<int64_t>("axis", 1)};
-                    axis = normalize_axis(node.get_description(), axis, x_shape.rank());
+                        axis = normalize_axis(node.get_description(), axis, x_shape.rank());
 
-                    const auto& y_scale_shape = y_scale.get_partial_shape();
-                    const auto& y_zero_point_shape = y_zero_point.get_partial_shape();
+                        const auto &y_scale_shape = y_scale.get_partial_shape();
+                        const auto &y_zero_point_shape = y_zero_point.get_partial_shape();
 
-                    if (y_scale_shape.rank().is_static() &&
-                        y_scale_shape.rank().get_length() == 1 && x_shape.rank().is_static() &&
-                        x_shape[axis].is_static())
-                    {
-                        CHECK_VALID_NODE(
-                            node,
-                            y_scale_shape[0].same_scheme(x_shape[axis]),
-                            "The number of quantization scale elements ",
-                            y_scale_shape[0],
-                            " must match the number of respective input data axis size: ",
-                            x_shape[axis]);
+                        if (y_scale_shape.rank().is_static() &&
+                            y_scale_shape.rank().get_length() == 1 && x_shape.rank().is_static() &&
+                            x_shape[axis].is_static()) {
+                            CHECK_VALID_NODE(
+                                    node,
+                                    y_scale_shape[0].same_scheme(x_shape[axis]),
+                                    "The number of quantization scale elements ",
+                                    y_scale_shape[0],
+                                    " must match the number of respective input data axis size: ",
+                                    x_shape[axis]);
 
-                        Shape target_shape(x_shape.rank().get_length(), 1);
-                        target_shape[axis] = static_cast<size_t>(x_shape[axis].get_length());
+                            Shape target_shape(x_shape.rank().get_length(), 1);
+                            target_shape[axis] = static_cast<size_t>(x_shape[axis].get_length());
 
-                        y_scale = builder::opset1::reshape(y_scale, target_shape);
+                            y_scale = builder::opset1::reshape(y_scale, target_shape);
+                        }
+
+                        if (y_zero_point_shape.rank().is_static() &&
+                            y_zero_point_shape.rank().get_length() == 1 && x_shape.rank().is_static() &&
+                            x_shape[axis].is_static()) {
+                            CHECK_VALID_NODE(
+                                    node,
+                                    y_zero_point_shape[0].same_scheme(x_shape[axis]),
+                                    "The number of quantization zero point elements ",
+                                    y_zero_point_shape[0],
+                                    " must match the number of respective input data axis size: ",
+                                    x_shape[axis]);
+
+                            Shape target_shape(x_shape.rank().get_length(), 1);
+                            target_shape[axis] = static_cast<size_t>(x_shape[axis].get_length());
+
+                            y_zero_point = builder::opset1::reshape(y_zero_point, target_shape);
+                        }
+
+                        return {detail::make_fake_quantize(y_scale, y_zero_point, x)};
                     }
-
-                    if (y_zero_point_shape.rank().is_static() &&
-                        y_zero_point_shape.rank().get_length() == 1 && x_shape.rank().is_static() &&
-                        x_shape[axis].is_static())
-                    {
-                        CHECK_VALID_NODE(
-                            node,
-                            y_zero_point_shape[0].same_scheme(x_shape[axis]),
-                            "The number of quantization zero point elements ",
-                            y_zero_point_shape[0],
-                            " must match the number of respective input data axis size: ",
-                            x_shape[axis]);
-
-                        Shape target_shape(x_shape.rank().get_length(), 1);
-                        target_shape[axis] = static_cast<size_t>(x_shape[axis].get_length());
-
-                        y_zero_point = builder::opset1::reshape(y_zero_point, target_shape);
-                    }
-
-                    return {detail::make_fake_quantize(y_scale, y_zero_point, x)};
                 }
 
+                OutputVector quantize_linear(const Node& node)
+                {
+                    const OutputVector inputs{node.get_ng_inputs()};
+
+                    NGRAPH_CHECK(2 <= inputs.size() && inputs.size() <= 3,
+                                 "The QuantizeLinear op expects 2 required and one optional "
+                                 "input. Got: ",
+                                 inputs.size());
+
+
+                    const auto x = inputs[0];
+                    auto scale = inputs[1];
+                    auto zero_point = op::detail::get_zero_point(inputs);
+
+                    return detail::quantize_linear(x, scale, zero_point, node.get_attribute_value<int64_t>("axis", 1), node);
+                }
             } // namespace set_13
 
         } // namespace op

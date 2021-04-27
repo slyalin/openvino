@@ -21,6 +21,12 @@ namespace ngraph
 
             namespace set_13
             {
+                namespace detail
+                {
+                    OutputVector quantize_linear(Output<ngraph::Node> x, Output<ngraph::Node> y_scale,
+                                                 Output<ngraph::Node> y_zero_point, int64_t axis, Node node);
+                }
+
                 OutputVector quantize_linear(const Node& node);
 
             } // namespace set_13
