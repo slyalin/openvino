@@ -792,11 +792,6 @@ shuffle_channels_simple
 shuffle_channels_negative_axis
 shuffle_channels_float
 
-# Detected op not belonging to opset1!
-onnx_model_quant_conv_linear
-onnx_model_quant_conv_linear_2d
-onnx_model_quant_conv_linear_3d
-
 # Cannot cast ngraph node Dot to CNNLayer!
 dot_4d_5d_multi_axis
 dot_4d_5d_multi_axis_more
