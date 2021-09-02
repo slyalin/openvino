@@ -43,7 +43,7 @@ def setup_env():
     return True
 
 
-def subprocess_main(framework=None):
+def subprocess_main(framework=None, new_args=None):
     """
         Please keep this file compatible with python2 in order to check user python version.
 
@@ -60,7 +60,12 @@ def subprocess_main(framework=None):
     # python2 compatible code. Do not remove.
     args = [sys.executable, path_to_main]
 
-    for arg in sys.argv[1:]:
+    ext_args = new_args if new_args is not None else sys.argv[1:]
+    for arg in ext_args:
         args.append(arg)
-    status = subprocess.run(args, env=os.environ)
-    sys.exit(status.returncode)
+    #status = subprocess.run(args, capture_output=new_args is not None, env=os.environ)
+    status = subprocess.run(args, capture_output=False, env=os.environ)
+    if new_args is None:
+        sys.exit(status.returncode)
+    else:
+        return status.returncode
