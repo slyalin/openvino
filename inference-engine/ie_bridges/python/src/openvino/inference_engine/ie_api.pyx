@@ -303,6 +303,132 @@ cdef class IECore:
             versions[device].major = ver.apiVersion.major
         return versions
 
+    def read_network(self, *args, **kwargs):
+        #TODO: Import only necessary things, move them close to the usage
+
+        import shutil
+        import sys
+        import os.path
+        import os
+
+        def flatten(t):
+            return [item for sublist in t for item in sublist]
+
+        def import_native_model (ie_core, *args, **kwargs):
+            print('Trying to import native model')
+            if len(args) == 0:
+                raise ValueError('Missing model object when trying to import FW native model object') # something went wrong
+            print(args[0], type(args[0]))
+
+            # Probe different known FWs by searching in already imported modules
+            if 'tensorflow' in sys.modules:
+                # re-import
+                # TODO: the same as reuse? efficient?
+                import tensorflow
+                # TODO: list all possible variants from TF here:
+                tmp_model_file = '__temp_model_tensorflow.internal.openvino'
+                if isinstance(args[0], tensorflow.python.keras.engine.sequential.Sequential):
+                    kwargs['saved_model_dir'] = tmp_model_file
+                    try:
+                        args[0].save(tmp_model_file)
+                        print('MODEL WAS SAVED')
+                        # reuse mo path
+                        return read_model(ie_core, **kwargs) # TODO: Don't loose args
+                    finally:
+                        print('TODO: REMOVE TEMPORARY FILE')
+                        shutil.rmtree(tmp_model_file)
+            if 'torch' in sys.modules:
+                import torch
+                tmp_model_file = '__temp_model_tensorflow.internal.openvino.onnx'
+                if issubclass(type(args[0]), torch.nn.Module):
+                    try:
+                        # We must receive input shapes in kwargs['input_shape']
+                        # TODO: expand to input and batch
+                        torch.onnx.export(args[0], (*kwargs['input_shape'], {}) if 'input_shape' in kwargs else None, tmp_model_file, opset_version=11)
+                        print('MODEL WAS EXPORTED AS AN ONNX MODEL')
+                        del kwargs['input_shape']
+                        return read_model(ie_core, tmp_model_file, **kwargs)
+                    finally:
+                        os.remove(tmp_model_file)
+
+        def import_mo (core, *args, **kwargs):
+            path = args[0] if len(args) > 0 and isinstance(args[0], str) and os.path.exists(args[0]) else None
+            nargs = kwargs
+            if path is not None:
+                nargs['input_model'] = path
+            tmp_file_name = "__tmp_model_name.openvino.internals"
+            nargs['model_name'] = tmp_file_name
+            nargs['silent'] = None
+            if 'input_model' in nargs or 'saved_model_dir' in nargs:
+                try:
+                    # TODO: Implement in a smart way considering the fact that MO emits intermediate IR as one of the backend steps
+                    from mo.subprocess_main import subprocess_main  # pylint: disable=no-name-in-module
+                    subprocess_main(framework=None, new_args=flatten([['--' + k, str(v)] if v is not None else ['--' + k] for k, v in nargs.items()]))
+                    network = core.read_network_old(tmp_file_name + '.xml')
+                    return network
+                finally:
+                    os.remove(tmp_file_name + '.xml')
+                    os.remove(tmp_file_name + '.bin')
+                    os.remove(tmp_file_name + '.mapping')
+
+        def import_runtime (core, *args, **kwargs):
+            if len(args) > 0 and isinstance(args[0], str):
+                if not args[0].endswith('.pb'):  # TODO: Extend it by more rules based on file name
+                    try:
+                        # Try to use RT load first
+                        network = core.read_network_old(*args)
+                        return network
+                    except Exception as error:
+                        print('FAILED TO LOAD WITH Core.read_network. Trying to use MO')
+                        print(error)
+                        return import_mo(core, *args, **kwargs)
+                else:
+                    return import_mo(core, *args, **kwargs)
+            else:
+                input_model_keys = ['input_model', 'saved_model_dir', 'input_proto', 'input_checkpoint', 'input_symbol', 'input_meta_graph']
+                if len(set(input_model_keys).intersection(set(kwargs.keys()))) > 0:
+                    return import_mo(core, *args, **kwargs)
+                else:
+                    return import_native_model(core, *args, **kwargs)
+
+        def read_model (ie_core, *args, **kwargs):
+            if len(args) > 0:
+                # There are can be two cases:
+                #   (1) legacy usage with up to 2 arguments and without additional key-value arguments
+                #   (2) with additional key-value parameters
+
+                # TODO: Implement smarter logic for routing to MO, RT FE or FW export
+
+                # If there is at least one key from this list, then model_optimizer is required for conversion
+                model_optimizer_only_keys = ['saved_model_dir', 'inputs', 'outputs', 'input_shape']  # etc.
+
+                return import_runtime(ie_core, *args, **kwargs)
+            else:
+                # Backward compatibility to the old read_network arg names
+                # TODO: Remove if decide the new API should have it
+                if 'model' in kwargs.keys():
+                    assert 'input_model' not in kwargs.keys()
+                    kwargs['input_model'] = kwargs['model']
+                    del kwargs['model']
+
+                if 'weights' in kwargs.keys():
+                    assert 'input_weights' not in kwargs.keys()
+                    kwargs['input_weights'] = kwargs['weights']
+                    del kwargs['weights']
+
+                args = []
+
+                if 'input_model' in kwargs.keys():
+                    args.append(kwargs['input_model'])
+
+                if 'input_weights' in kwargs.keys():
+                    args.append(kwargs['input_weights'])
+
+                return import_runtime(ie_core, *args, **kwargs)
+
+        print('FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF')
+        return read_model(self, *args, **kwargs)
+
     ## Reads a network from Intermediate Representation (IR) or ONNX formats and creates an `IENetwork`.
     #  @param model: A `.xml`, `.onnx`or `.prototxt` model file or string with IR.
     #  @param weights: A `.bin` file of the IR. Depending on `init_from_buffer` value, can be a string path or
@@ -317,7 +443,7 @@ cdef class IECore:
     #  ie = IECore()
     #  net = ie.read_network(model=path_to_xml_file, weights=path_to_bin_file)
     #  ```
-    cpdef IENetwork read_network(self, model: [str, bytes, os.PathLike], weights: [str, bytes, os.PathLike] = "", init_from_buffer: bool = False):
+    cpdef IENetwork read_network_old(self, model: [str, bytes, os.PathLike], weights: [str, bytes, os.PathLike] = "", init_from_buffer: bool = False):
         cdef uint8_t*bin_buffer
         cdef string weights_
         cdef string model_
@@ -345,6 +471,24 @@ cdef class IECore:
                 net.impl = self.impl.readNetwork(model_, weights_)
         return net
 
+    def load_network(self, *args, **kwargs):
+        return self.load_network_old(*args, **kwargs)
+
+        # TODO: Implement to be aligned with new read_network
+        device_name = None
+        if 'device_name' in kwargs:
+            device_name = kwargs['device_name']
+            del kwargs['device_name']
+        else:
+            if len(args) > 0:
+                device_name = args[-1]
+                del args[-1]
+            else:
+                raise Exception('Missing device_name argument')  # TODO: Should we provide CPU as a default?
+        # TODO: The separate read_network call leads to suboptimal model cashing performance
+        network = self.read_network(*args, **kwargs)
+        self.load_network_old(network)
+
     ## Loads a network that was read from the Intermediate Representation (IR) to the plugin with specified device name
     #    and creates an `ExecutableNetwork` object of the `IENetwork` class.
     #    You can create as many networks as you need and use them simultaneously (up to the limitation of the hardware
@@ -363,7 +507,7 @@ cdef class IECore:
     #  net = ie.read_network(model=path_to_xml_file, weights=path_to_bin_file)
     #  exec_net = ie.load_network(network=net, device_name="CPU", num_requests=2)
     #  ```
-    cpdef ExecutableNetwork load_network(self, network: [IENetwork, str], str device_name, config=None, int num_requests=1):
+    cpdef ExecutableNetwork load_network_old(self, network: [IENetwork, str], str device_name, config=None, int num_requests=1):
         cdef ExecutableNetwork exec_net = ExecutableNetwork()
         cdef map[string, string] c_config
         cdef string c_device_name

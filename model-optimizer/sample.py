@@ -4,6 +4,33 @@ import torch
 import torchvision
 import shutil
 
+
+def my(*model_parts_terminated_by_device_name, **optional_parameters):
+    """Summary or Description of the Function
+
+    Parameters:
+    model_parts_terminated_by_device_name (list of objects): One or multiple file names with model definition (OpenVINO IR, a framework specific file),
+                            terminated by a device name ('CPU', 'GPU' etc.). Not serialized model representation from
+                            a framework can be specified instead of file name.
+
+    optional_parameters (dict of objects): Optional conversion parameters.
+
+    Returns:
+    int:Returning value
+
+   """
+    print(model_parts_terminated_by_device_name)
+    #print(device)
+    print(optional_parameters)
+
+my(print, help, 'CPU', attr=7)
+
+my('path', 'CPU', ATTR1=34, h='459803')
+my('path', 3, device='CPU', ATTR1=34, h='459803')
+my('path', device='CPU')
+my('path', device='CPU')
+
+
 dummy_input = torch.randn(10, 3, 224, 224)
 alexnet = torchvision.models.alexnet(pretrained=True)
 #print(type(model))
@@ -137,16 +164,16 @@ class MyCore(openvino.inference_engine.IECore):
     def read_model (self, *args, **kwargs):
         return read_model(self, *args, **kwargs)
 
-core = MyCore()
+core = openvino.inference_engine.IECore()
 
 #################################
 # Imagine that core = openvino.inference_engine.IECore()
 
-model = core.read_model("/localdisk/slyalin/openvino_github/openvino_7/model-optimizer/resnet_v2_50.xml")
+model = core.read_network("/localdisk/slyalin/openvino_github/openvino_7/model-optimizer/resnet_v2_50.xml")
 model.serialize("test.xml", "test.bin")
 print(model)
 
-model = core.read_model(input_model="/localdisk/slyalin/openvino_github/openvino_7/model-optimizer/resnet_v2_50.xml")
+model = core.read_network(input_model="/localdisk/slyalin/openvino_github/openvino_7/model-optimizer/resnet_v2_50.xml")
 model.serialize("test.xml", "test.bin")
 print(model)
 
@@ -190,10 +217,10 @@ probability_model = tf.keras.Sequential([
 print(probability_model(x_test[:5]))
 
 #core = openvino.inference_engine.IECore()
-network = core.read_model(probability_model, batch=5)
+network = core.read_network(probability_model, batch=5)
 executable = core.load_network(network, 'CPU')
 
 print(executable.infer({'sequential_input': x_test[:5]}))
 
-network_torch = core.read_model(alexnet, input_shape=[dummy_input]) # TODO: Replace dummy_input by just a shape
+network_torch = core.read_network(alexnet, input_shape=[dummy_input]) # TODO: Replace dummy_input by just a shape
 network_torch.serialize('exported_from_pytorch.xml')

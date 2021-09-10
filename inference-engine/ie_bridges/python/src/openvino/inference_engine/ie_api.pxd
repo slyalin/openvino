@@ -54,9 +54,9 @@ cdef class ExecutableNetwork:
 
 cdef class IECore:
     cdef C.IECore impl
-    cpdef IENetwork read_network(self, model : [str, bytes, os.PathLike],
+    cpdef IENetwork read_network_old(self, model : [str, bytes, os.PathLike],
                                  weights : [str, bytes, os.PathLike] = ?, bool init_from_buffer = ?)
-    cpdef ExecutableNetwork load_network(self, network: [IENetwork, str],
+    cpdef ExecutableNetwork load_network_old(self, network: [IENetwork, str],
                                          str device_name, config = ?, int num_requests = ?)
     cpdef ExecutableNetwork import_network(self, str model_file, str device_name, config = ?, int num_requests = ?)
 
