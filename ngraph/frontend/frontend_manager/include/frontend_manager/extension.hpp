@@ -140,6 +140,22 @@ public:
     std::function<OutputVector(std::shared_ptr<NodeContext>)> m_converter;
 };
 
+// One-to-one operation mapping for OVOpType != void which means OV type is specified by OVOpType
+// See a specialization for OVOptype = void
+template <typename OVOpType=void>
+class FRONTEND_API OpExtension : public ConversionExtension { // TODO: Consider deriving from base Extension class
+public:
+
+    // All attributes come from OVOpType definition, op type in FW and OV match, available for OVOpType != void only
+    OpExtension ();
+
+    // Maps op with a given type in FW and OV type given in template parameter
+    OpExtension (const std::string& fw_type_name);
+
+    OpExtension (const std::string& fw_type_name, std::map<std::string, std::string>& attr_names_map);
+
+};
+
 }  // namespace frontend
 
 }  // namespace ngraph
