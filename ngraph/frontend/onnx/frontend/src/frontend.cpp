@@ -17,8 +17,8 @@
 #include "onnx_common/onnx_model_validator.hpp"
 #include <openvino/op/util/framework_node.hpp>
 
-using namespace ngraph;
-using namespace ngraph::frontend;
+using namespace ov;
+using namespace ov::frontend;
 
 using VariantString = VariantWrapper<std::string>;
 using VariantWString = VariantWrapper<std::wstring>;
@@ -91,14 +91,14 @@ InputModel::Ptr FrontEndONNX::load_impl(const std::vector<std::shared_ptr<Varian
 std::shared_ptr<ngraph::Function> FrontEndONNX::convert(InputModel::Ptr model) const {
     auto model_onnx = std::dynamic_pointer_cast<InputModelONNX>(model);
     NGRAPH_CHECK(model_onnx != nullptr, "Invalid input model");
-    auto telemetry = std::dynamic_pointer_cast<TelemetryExtension>(m_telemetry);
+    auto telemetry = std::dynamic_pointer_cast<ngraph::frontend::TelemetryExtension>(m_telemetry);
     if (!m_extensions.empty() || telemetry) {
         // The list of extension may contain not only decoder extensions
         // TODO: sort the extension initially in add_extension, avoid double checking of extension type
         ov::pass::Manager manager;
         bool activated = false;
         for (auto extension: m_extensions) {
-            if (auto decoder_extension = std::dynamic_pointer_cast<DecoderTransformationExtension>(extension)) {
+            if (auto decoder_extension = std::dynamic_pointer_cast<ngraph::frontend::DecoderTransformationExtension>(extension)) {
                 decoder_extension->register_pass(manager);
                 activated = true;
             }
@@ -119,7 +119,7 @@ std::shared_ptr<ngraph::Function> FrontEndONNX::convert(InputModel::Ptr model) c
 }
 
 void FrontEndONNX::convert(std::shared_ptr<ngraph::Function> partially_converted) const {
-    onnx_import::detail::convert_decoded_function(partially_converted);
+    ngraph::onnx_import::detail::convert_decoded_function(partially_converted);
 }
 
 std::shared_ptr<ngraph::Function> FrontEndONNX::decode(InputModel::Ptr model) const {
@@ -171,33 +171,33 @@ bool FrontEndONNX::supported_impl(const std::vector<std::shared_ptr<Variant>>& v
 #endif
     if (model_stream.is_open()) {
         model_stream.seekg(0, model_stream.beg);
-        const bool is_valid_model = onnx_common::is_valid_model(model_stream);
+        const bool is_valid_model = ngraph::onnx_common::is_valid_model(model_stream);
         model_stream.close();
         return is_valid_model;
     }
     if (ov::is_type<VariantIstreamPtr>(variants[0])) {
         const auto stream = ov::as_type_ptr<VariantIstreamPtr>(variants[0])->get();
         StreamRewinder rwd{*stream};
-        return onnx_common::is_valid_model(*stream);
+        return ngraph::onnx_common::is_valid_model(*stream);
     }
     return false;
 }
 
 void FrontEndONNX::add_extension(const std::shared_ptr<ov::Extension>& extension) {
-    if (std::dynamic_pointer_cast<DecoderTransformationExtension>(extension)) {
+    if (std::dynamic_pointer_cast<ngraph::frontend::DecoderTransformationExtension>(extension)) {
         m_extensions.push_back(extension);
     }
 
-    if (auto telemetry = std::dynamic_pointer_cast<TelemetryExtension>(extension)) {
+    if (auto telemetry = std::dynamic_pointer_cast<ngraph::frontend::TelemetryExtension>(extension)) {
         m_telemetry = telemetry;
     }
 
-    if (auto newop = std::dynamic_pointer_cast<ConversionExtension>(extension)) {
+    if (auto newop = std::dynamic_pointer_cast<ngraph::frontend::ConversionExtension>(extension)) {
         std::cerr << "++++++++++++++++REGISTER NEW OP+++++++++: " << newop->m_optype << '\n';
         for (int i = 1; i < 13; ++i)
-            onnx_import::register_operator(newop->m_optype, i, "", [=](const onnx_import::Node &context) {
+            ngraph::onnx_import::register_operator(newop->m_optype, i, "", [=](const ngraph::onnx_import::Node &context) {
                 return newop->m_converter(
-                        std::make_shared<NodeContext>(context.op_type(), context.get_ng_inputs()));
+                        std::make_shared<ngraph::frontend::NodeContext>(context.op_type(), context.get_ng_inputs()));
             });
     }
 }
