@@ -139,7 +139,7 @@ public:
 
     template <class Attribute>
     static bool checkIfOutputAttributesAreTheSame(const NodeVector& nodes) {
-        Variant* first = nullptr;
+        void* first = nullptr;
         for (auto node : nodes) {
             for (auto output : node->outputs()) {
                 auto& rt = output.get_rt_info();

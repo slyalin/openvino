@@ -38,6 +38,7 @@ public:
 template <typename VT>
 class VariantImpl : public Variant {
 public:
+    OPENVINO_RTTI(typeid(VT).name());
     using value_type = VT;
 
     VariantImpl() = default;
@@ -103,7 +104,5 @@ inline std::shared_ptr<Variant> make_variant(const wchar_t (&s)[N]) {
     return std::dynamic_pointer_cast<VariantImpl<std::wstring>>(std::make_shared<VariantWrapper<std::wstring>>(s));
 }
 #endif
-
-using RTMap = std::map<std::string, std::shared_ptr<Variant>>;
 using VariantVector = std::vector<std::shared_ptr<Variant>>;
 }  // namespace ov

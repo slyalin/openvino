@@ -36,6 +36,7 @@
 #include "ngraph/strides.hpp"
 #include "ngraph/type.hpp"
 #include "ngraph/variant.hpp"
+#include "openvino/core/any.hpp"
 #include "openvino/core/node.hpp"
 
 namespace ov {

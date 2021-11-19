@@ -54,7 +54,7 @@ public:
         using MemoryFormatsWrapper = VariantWrapper<MemoryFormatsType>;
         if (!rtInfo.count(MemoryFormatsWrapper::get_type_info_static().name)) return "";
         const auto &attr = rtInfo.at(MemoryFormatsWrapper::get_type_info_static().name);
-        MemoryFormatsType mem_format = ngraph::as_type_ptr<MemoryFormatsWrapper>(attr)->get();
+        MemoryFormatsType mem_format = attr.template as<std::shared_ptr<MemoryFormatsWrapper>>()->get();
         return mem_format.getMemoryFormats();
     }
 
