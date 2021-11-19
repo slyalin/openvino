@@ -201,7 +201,6 @@ OpExtension<OVOpType>::OpExtension (const std::string& fw_type_name,
             fw_type_name,
             [attr_names_map, attr_values_map](std::shared_ptr<NodeContext> context) {
                 std::cerr << "[ INFO ] Activated OpExtension!\n";
-                std::cerr << ngraph::PartialShape().is_dynamic() << "\n";
                 auto node = std::make_shared<OVOpType>();
                 node->set_arguments(context->get_ng_inputs());
                 FWVisitor fwvisitor(context, attr_names_map, attr_values_map);
