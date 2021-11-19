@@ -108,7 +108,7 @@ public:
 #endif
 
     /// @brief Registers extension
-    /// @param extension Extension class which is inherited from ov::BaseExtension class
+    /// @param extension Extension class which is inherited from ov::BaseOpExtension class
     template <class T, typename std::enable_if<std::is_base_of<ov::Extension, T>::value, bool>::type = true>
     void add_extension(const T& extension) {
         std::shared_ptr<ov::Extension> ext = std::make_shared<T>(extension);
