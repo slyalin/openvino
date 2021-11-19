@@ -16,6 +16,7 @@
 #include "details/ie_so_pointer.hpp"
 #include "file_utils.h"
 #include "frontend_manager/frontend_manager.hpp"
+#include "frontend_manager/extension.hpp"
 #include "ie_api.h"
 #include "ie_common.h"
 #include "ie_icnn_network.hpp"
@@ -32,6 +33,7 @@
 #include "openvino/core/preprocess/input_tensor_info.hpp"
 #include "openvino/core/preprocess/pre_post_process.hpp"
 #include "openvino/core/type/element_type.hpp"
+#include "openvino/op/subtract.hpp"
 #include "transformations/rt_info/old_api_map_attribute.hpp"
 #include "transformations/utils/utils.hpp"
 
@@ -488,6 +490,9 @@ CNNNetwork details::ReadNetwork(const std::string& modelPath,
     FE = manager.load_by_model(params);
     if (FE) {
         FE->add_extension(ov_exts);
+
+        FE->add_extension(ngraph::frontend::OpExtension<ov::op::v1::Subtract>("Add", {{"auto_broadcast", "none"}}));
+
         if (!exts.empty())
             FE->add_extension(wrap_old_extensions(exts));
         inputModel = FE->load(params);

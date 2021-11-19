@@ -28,7 +28,7 @@ class VisitorAdapter;
 /// attributes.
 ///
 /// Attributes have a wide variety of types, but serialization formats are more restricted.
-/// We asume serialation easily supports scalar types of bool 64-bit signed, string, and double,
+/// We assume serialization easily supports scalar types of bool, 64-bit signed, string, and double,
 /// and has specialized ways to support numeric arrays and raw data+size. The visitor and
 /// adapter convert between the limited serialization types and the unlimited attribute types.
 ///

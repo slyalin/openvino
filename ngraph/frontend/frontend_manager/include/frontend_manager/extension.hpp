@@ -123,6 +123,12 @@ public:
     OutputVector get_ng_inputs() const { return m_ng_inputs; }
     const std::string& op_type() const { return m_op_type; }
 
+    template <typename T>
+    T get_attribute (const std::string& name) {
+        // TODO: Replace this stub by a real implementation here
+        return T();
+    }
+
 private:
 
     OutputVector m_ng_inputs;
@@ -147,13 +153,86 @@ class FRONTEND_API OpExtension : public ConversionExtension { // TODO: Consider 
 public:
 
     // All attributes come from OVOpType definition, op type in FW and OV match, available for OVOpType != void only
-    OpExtension ();
+    // Attributes mapping can be modified with optional parameters
+    OpExtension (const std::map<std::string, std::string>& attr_names_map = {},
+                 const std::map<std::string, std::string>& attr_values_map = {}) :
+            OpExtension(OVOpType::get_type_info_static().name, attr_names_map, attr_values_map) {}
 
     // Maps op with a given type in FW and OV type given in template parameter
-    OpExtension (const std::string& fw_type_name);
+    OpExtension (
+            const std::string& fw_type_name,
+            const std::map<std::string, std::string>& attr_names_map = {},
+            const std::map<std::string, std::string>& attr_values_map = {});
 
-    OpExtension (const std::string& fw_type_name, std::map<std::string, std::string>& attr_names_map);
+};
 
+class FWVisitor : public ov::AttributeVisitor {
+public:
+    explicit FWVisitor(
+            std::shared_ptr<NodeContext> context,
+            const std::map<std::string, std::string> &attr_names_map = {},
+            const std::map<std::string, std::string> &attr_values_map = {}) :
+            m_context(context), m_attr_names_map(attr_names_map), m_attr_values_map(attr_values_map) {}
+
+    void on_adapter (const std::string& name, ValueAccessor<void>& a) override {
+        if(auto adapter = ngraph::as_type<ngraph::AttributeAdapter<std::string>>(&a)) {
+            auto p_value = m_attr_values_map.find(name);
+            if (p_value != m_attr_values_map.end()) {
+                adapter->set(p_value->second);
+            } else {
+                p_value = m_attr_names_map.find(name);
+                const std::string &target_name = p_value != m_attr_names_map.end() ? p_value->second : name;
+                adapter->set(m_context->get_attribute<std::string>(target_name));
+            }
+        }
+    }
+
+private:
+    std::shared_ptr<NodeContext> m_context;
+    const std::map<std::string, std::string> &m_attr_names_map;
+    const std::map<std::string, std::string> &m_attr_values_map;
+};
+
+template <typename OVOpType>
+OpExtension<OVOpType>::OpExtension (const std::string& fw_type_name,
+                                    const std::map<std::string, std::string>& attr_names_map,
+                                    const std::map<std::string, std::string>& attr_values_map) :
+    ConversionExtension(
+            fw_type_name,
+            [attr_names_map, attr_values_map](std::shared_ptr<NodeContext> context) {
+                std::cerr << "[ INFO ] Activated OpExtension!\n";
+                std::cerr << ngraph::PartialShape().is_dynamic() << "\n";
+                auto node = std::make_shared<OVOpType>();
+                node->set_arguments(context->get_ng_inputs());
+                FWVisitor fwvisitor(context, attr_names_map, attr_values_map);
+                node->visit_attributes(fwvisitor);
+                node->validate_and_infer_types();
+                return node->outputs();
+            }
+    )
+{
+        std::cerr << "[ INFO ] Registered OpExtension\n";
+}
+
+template <>
+class FRONTEND_API OpExtension<void> : public ConversionExtension { // TODO: Consider deriving from base Extension class
+public:
+
+    // Default ctor is not available, you need to specify OV type with another ctor
+    OpExtension () = delete;
+
+    // Maps op with a given type in FW and matching OV type given in template parameter
+    OpExtension (
+            const std::string& fw_ov_type_name,
+            const std::map<std::string, std::string>& attr_names_map = {},
+            const std::map<std::string, std::string>& attr_values_map = {});
+
+    // Maps op with a given type in FW and specified OV type given in template parameter
+    OpExtension (
+            const std::string& ov_type_name,
+            const std::string& fw_type_name,
+            const std::map<std::string, std::string>& attr_names_map = {},
+            const std::map<std::string, std::string>& attr_values_map = {});
 };
 
 }  // namespace frontend
