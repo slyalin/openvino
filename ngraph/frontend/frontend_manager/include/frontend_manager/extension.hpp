@@ -12,6 +12,7 @@
 #include <openvino/core/extension.hpp>
 #include <openvino/pass/graph_rewrite.hpp>
 #include <openvino/pass/manager.hpp>
+#include <openvino/core/any.hpp>
 #include "../../../../thirdparty/nlohmann/json/json.hpp"
 
 
@@ -125,15 +126,24 @@ public:
 
     template <typename T>
     T get_attribute (const std::string& name) {
-        // TODO: Replace this stub by a real implementation here
-        return T();
+        return get_attribute_as_any(name).as<T>();
     }
+
+protected:
+
+    virtual ov::Any get_attribute_as_any (const std::string& name) const = 0;
 
 private:
 
     OutputVector m_ng_inputs;
     std::string m_op_type;
 };
+
+template <>
+inline ov::Any NodeContext::get_attribute<ov::Any> (const std::string& name) {
+    // TODO: Replace this stub by a real implementation here
+    return get_attribute_as_any(name);
+}
 
 
 class FRONTEND_API ConversionExtension : public ov::Extension {
@@ -155,14 +165,14 @@ public:
     // All attributes come from OVOpType definition, op type in FW and OV match, available for OVOpType != void only
     // Attributes mapping can be modified with optional parameters
     OpExtension (const std::map<std::string, std::string>& attr_names_map = {},
-                 const std::map<std::string, std::string>& attr_values_map = {}) :
+                 const std::map<std::string, ov::Any>& attr_values_map = {}) :
             OpExtension(OVOpType::get_type_info_static().name, attr_names_map, attr_values_map) {}
 
     // Maps op with a given type in FW and OV type given in template parameter
     OpExtension (
             const std::string& fw_type_name,
             const std::map<std::string, std::string>& attr_names_map = {},
-            const std::map<std::string, std::string>& attr_values_map = {});
+            const std::map<std::string, ov::Any>& attr_values_map = {});
 
 };
 
@@ -171,32 +181,30 @@ public:
     explicit FWVisitor(
             std::shared_ptr<NodeContext> context,
             const std::map<std::string, std::string> &attr_names_map = {},
-            const std::map<std::string, std::string> &attr_values_map = {}) :
+            const std::map<std::string, ov::Any> &attr_values_map = {}) :
             m_context(context), m_attr_names_map(attr_names_map), m_attr_values_map(attr_values_map) {}
 
-    void on_adapter (const std::string& name, ValueAccessor<void>& a) override {
-        if(auto adapter = ngraph::as_type<ngraph::AttributeAdapter<std::string>>(&a)) {
-            auto p_value = m_attr_values_map.find(name);
-            if (p_value != m_attr_values_map.end()) {
-                adapter->set(p_value->second);
-            } else {
-                p_value = m_attr_names_map.find(name);
-                const std::string &target_name = p_value != m_attr_names_map.end() ? p_value->second : name;
-                adapter->set(m_context->get_attribute<std::string>(target_name));
-            }
+    void on_adapter (const std::string& name, ValueAccessor<void>& adapter) override {
+        auto p_value = m_attr_values_map.find(name);
+        if (p_value != m_attr_values_map.end()) {
+            adapter.set_as_any(p_value->second);
+        } else {
+            auto p_name = m_attr_names_map.find(name);
+            const std::string &target_name = p_name != m_attr_names_map.end() ? p_name->second : name;
+            adapter.set_as_any(m_context->get_attribute<ov::Any>(target_name));
         }
     }
 
 private:
     std::shared_ptr<NodeContext> m_context;
     const std::map<std::string, std::string> &m_attr_names_map;
-    const std::map<std::string, std::string> &m_attr_values_map;
+    const std::map<std::string, ov::Any> &m_attr_values_map;
 };
 
 template <typename OVOpType>
 OpExtension<OVOpType>::OpExtension (const std::string& fw_type_name,
                                     const std::map<std::string, std::string>& attr_names_map,
-                                    const std::map<std::string, std::string>& attr_values_map) :
+                                    const std::map<std::string, ov::Any>& attr_values_map) :
     ConversionExtension(
             fw_type_name,
             [attr_names_map, attr_values_map](std::shared_ptr<NodeContext> context) {

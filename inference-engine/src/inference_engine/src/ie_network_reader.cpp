@@ -35,7 +35,7 @@
 #include "openvino/core/preprocess/input_tensor_info.hpp"
 #include "openvino/core/preprocess/pre_post_process.hpp"
 #include "openvino/core/type/element_type.hpp"
-#include "openvino/op/subtract.hpp"
+#include "openvino/opsets/opset7.hpp"
 #include "transformations/rt_info/old_api_map_order_attribute.hpp"
 #include "transformations/utils/utils.hpp"
 
@@ -486,7 +486,19 @@ CNNNetwork details::ReadNetwork(const std::string& modelPath,
     if (FE) {
         FE->add_extension(ov_exts);
 
-        FE->add_extension(ngraph::frontend::OpExtension<ov::op::v1::Subtract>("Add", {{"auto_broadcast", "none"}}));
+        // TODO: Remove the following block
+        // This is an example of new extension application in the shortest form
+        /*
+        FE->add_extension(ngraph::frontend::OpExtension<ov::opset7::Subtract>("Add", {}, {{"auto_broadcast", "NUMPY"}}));
+        FE->add_extension(ngraph::frontend::OpExtension<ov::opset7::Convolution>(
+            "Conv",
+            {{"pads_begin", "strides"}},
+            {{"dilations", std::vector<long>{10, 10}},
+             {"auto_pad", "valid"},
+             {"pads_end", std::vector<std::ptrdiff_t>{0, 0}}}
+        ));
+        */
+
 
         if (!exts.empty())
             FE->add_extension(wrap_old_extensions(exts));

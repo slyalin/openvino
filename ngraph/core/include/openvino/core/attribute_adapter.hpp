@@ -13,6 +13,7 @@
 #include "openvino/core/enum_names.hpp"
 #include "openvino/core/rtti.hpp"
 #include "openvino/core/type.hpp"
+#include <openvino/core/any.hpp>
 
 ///
 namespace ov {
@@ -34,6 +35,8 @@ public:
     /// as_type.
     virtual const DiscreteTypeInfo& get_type_info() const = 0;
     virtual ~ValueAccessor() = default;
+    virtual ov::Any get_as_any () { throw std::logic_error("get_as_any is not implemented"); }
+    virtual void set_as_any (const ov::Any& x) { throw std::logic_error("set_as_any is not implemented"); }
 };
 
 /// \brief Provides access to values via get/set methods from an m_value, typically from
@@ -52,6 +55,9 @@ public:
     virtual const VAT& get() = 0;
     /// Sets the value
     virtual void set(const VAT& value) = 0;
+
+    ov::Any get_as_any () override { return get(); }
+    virtual void set_as_any (const ov::Any& x) override { set(x.as<VAT>()); }
 };
 
 template <>
@@ -94,6 +100,21 @@ public:
         m_buffer_valid = false;
     }
 
+    virtual void set_as_any (const ov::Any& x) override {
+        // TODO: Redesign hierarchy of IndirectScalarValueAccessor, IndirectVectorValueAccessor and
+        // EnumAttributeAdapterBase to avoid duplicating the implementation of this function in all three classes.
+
+        // Try to represent x as VAT or AT
+        if (x.is<VAT>()) {
+            set(x.as<VAT>());
+        } else {
+            // Don't call set here avoiding unnecessary casts AT -> VAT -> AT,
+            // instead reimplement logic from set.
+            m_ref = x.as<AT>();
+            m_buffer_valid = false;
+        }
+    }
+
 protected:
     AT& m_ref;
     VAT m_buffer;
@@ -131,6 +152,21 @@ public:
         return m_ref;
     }
 
+    virtual void set_as_any (const ov::Any& x) override {
+        // TODO: Redesign hierarchy of IndirectScalarValueAccessor, IndirectVectorValueAccessor and
+        // EnumAttributeAdapterBase to avoid duplicating the implementation of this function in all three classes.
+
+        // Try to represent x as VAT or AT
+        if (x.is<VAT>()) {
+            set(x.as<VAT>());
+        } else {
+            // Don't call set here avoiding unnecessary casts AT -> VAT -> AT,
+            // instead reimplement logic from set.
+            m_ref = x.as<AT>();
+            m_buffer_valid = false;
+        }
+    }
+
 protected:
     AT& m_ref;
     VAT m_buffer;
@@ -157,6 +193,20 @@ public:
     }
     operator AT&() {
         return m_ref;
+    }
+
+    virtual void set_as_any (const ov::Any& x) override {
+        // TODO: Redesign hierarchy of IndirectScalarValueAccessor, IndirectVectorValueAccessor and
+        // EnumAttributeAdapterBase to avoid duplicating the implementation of this function in all three classes.
+
+        // Try to represent x as std::string or AT
+        if (x.is<std::string>()) {
+            set(x.as<std::string>());
+        } else {
+            // Don't call set here avoiding unnecessary casts AT -> std::string -> AT,
+            // instead reimplement logic from set.
+            m_ref = x.as<AT>();
+        }
     }
 
 protected:

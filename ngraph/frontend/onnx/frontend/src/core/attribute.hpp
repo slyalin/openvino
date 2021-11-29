@@ -5,6 +5,7 @@
 #pragma once
 
 #include <onnx/onnx_pb.h>
+#include <openvino/core/any.hpp>
 
 #include "core/sparse_tensor.hpp"
 #include "core/tensor.hpp"
@@ -326,6 +327,9 @@ public:
     T get_value() const {
         return detail::attribute::get_value<T>(*m_attribute_proto);
     }
+
+    /// Returns attribute value represented as ov::Any with object type determined by get_type()
+    ov::Any get_any() const;
 
 private:
     const ONNX_NAMESPACE::AttributeProto* m_attribute_proto;

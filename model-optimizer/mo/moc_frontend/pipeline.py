@@ -36,7 +36,7 @@ def moc_pipeline(argv: argparse.Namespace, moc_front_end: FrontEnd):
     def my_converter (context):
         print('+++++++++++ CONVETER WAS CALLED ++++++++')
         return [ngraph.divide(context.get_ng_inputs()[0], context.get_ng_inputs()[1]).output(0)]
-    moc_front_end.add_extension(ConversionExtension("Add", my_converter))
+    #moc_front_end.add_extension(ConversionExtension("Add", my_converter))
 
     input_model = moc_front_end.load(argv.input_model)
 

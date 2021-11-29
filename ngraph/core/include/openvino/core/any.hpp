@@ -15,7 +15,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include "openvino/core/attribute_visitor.hpp"
+//#include "openvino/core/attribute_visitor.hpp"
 #include "openvino/core/except.hpp"
 #include "openvino/core/variant.hpp"
 
@@ -29,6 +29,8 @@ namespace ov {
 class Node;
 class Variant;
 class ParamMap;
+
+class AttributeVisitor;
 
 namespace runtime {
 class ExecutableNetwork;

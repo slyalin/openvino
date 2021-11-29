@@ -185,6 +185,9 @@ ONNX_IMPORTER_API std::vector<SparseTensor> Node::get_attribute_value(const std:
 template <>
 ONNX_IMPORTER_API std::vector<Graph> Node::get_attribute_value(const std::string& name) const;
 
+template <>
+ONNX_IMPORTER_API ov::Any Node::get_attribute_value(const std::string& name) const;
+
 inline std::ostream& operator<<(std::ostream& outs, const Node& node) {
     return (outs << "<Node(" << node.op_type() << "): " << node.get_description() << ">");
 }

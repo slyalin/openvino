@@ -183,6 +183,21 @@ bool FrontEndONNX::supported_impl(const std::vector<std::shared_ptr<Variant>>& v
     return false;
 }
 
+class NodeContextONNX : public ngraph::frontend::NodeContext {
+public:
+
+    NodeContextONNX (const ngraph::onnx_import::Node& _context) :
+        ngraph::frontend::NodeContext(_context.op_type(), _context.get_ng_inputs()), context(_context) {}
+
+protected:
+
+    const ngraph::onnx_import::Node& context;
+
+    ov::Any get_attribute_as_any (const std::string& name) const override {
+        return context.get_attribute_value<ov::Any>(name);
+    }
+};
+
 void FrontEndONNX::add_extension(const std::shared_ptr<ov::Extension>& extension) {
     if (std::dynamic_pointer_cast<ngraph::frontend::DecoderTransformationExtension>(extension)) {
         m_extensions.push_back(extension);
@@ -197,7 +212,7 @@ void FrontEndONNX::add_extension(const std::shared_ptr<ov::Extension>& extension
         for (int i = 1; i < 13; ++i)
             ngraph::onnx_import::register_operator(newop->m_optype, i, "", [=](const ngraph::onnx_import::Node &context) {
                 return newop->m_converter(
-                        std::make_shared<ngraph::frontend::NodeContext>(context.op_type(), context.get_ng_inputs()));
+                        std::make_shared<NodeContextONNX>(context));
             });
     }
 }

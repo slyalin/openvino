@@ -418,6 +418,11 @@ template <>
 std::vector<Graph> Node::get_attribute_value(const std::string& name) const {
     return m_pimpl->template get_attribute_value<std::vector<Graph>>(name);
 }
+
+template <>
+ov::Any Node::get_attribute_value(const std::string& name) const {
+    return get_attribute(name).get_any();
+}
 }  // namespace onnx_import
 
 }  // namespace ngraph
