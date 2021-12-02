@@ -135,8 +135,9 @@ protected:
 
 private:
 
-    OutputVector m_ng_inputs;
     std::string m_op_type;
+    OutputVector m_ng_inputs;
+
 };
 
 template <>
@@ -145,31 +146,31 @@ inline ov::Any NodeContext::get_attribute<ov::Any> (const std::string& name) {
     return get_attribute_as_any(name);
 }
 
-
-class FRONTEND_API ConversionExtension : public ov::Extension {
+class FRONTEND_API _ConversionExtensionBase : public ov::Extension {
 public:
 
-    ConversionExtension (const std::string& optype, std::function<OutputVector(std::shared_ptr<NodeContext>)> converter) :
+    _ConversionExtensionBase (const std::string& optype, std::function<OutputVector(std::shared_ptr<NodeContext>)> converter) :
         m_optype(optype), m_converter(converter) {}
 
     std::string m_optype;
     std::function<OutputVector(std::shared_ptr<NodeContext>)> m_converter;
 };
 
+
 // One-to-one operation mapping for OVOpType != void which means OV type is specified by OVOpType
 // See a specialization for OVOptype = void
-template <typename OVOpType=void>
-class FRONTEND_API OpExtension : public ConversionExtension { // TODO: Consider deriving from base Extension class
+template <typename BaseConversionType, typename OVOpType=void>
+class FRONTEND_API _OpExtensionBase : public BaseConversionType {
 public:
 
     // All attributes come from OVOpType definition, op type in FW and OV match, available for OVOpType != void only
     // Attributes mapping can be modified with optional parameters
-    OpExtension (const std::map<std::string, std::string>& attr_names_map = {},
+    _OpExtensionBase (const std::map<std::string, std::string>& attr_names_map = {},
                  const std::map<std::string, ov::Any>& attr_values_map = {}) :
-            OpExtension(OVOpType::get_type_info_static().name, attr_names_map, attr_values_map) {}
+            _OpExtensionBase(OVOpType::get_type_info_static().name, attr_names_map, attr_values_map) {}
 
     // Maps op with a given type in FW and OV type given in template parameter
-    OpExtension (
+    _OpExtensionBase (
             const std::string& fw_type_name,
             const std::map<std::string, std::string>& attr_names_map = {},
             const std::map<std::string, ov::Any>& attr_values_map = {});
@@ -201,41 +202,61 @@ private:
     const std::map<std::string, ov::Any> &m_attr_values_map;
 };
 
-template <typename OVOpType>
-OpExtension<OVOpType>::OpExtension (const std::string& fw_type_name,
+class OpConversionFunction {
+public:
+    OpConversionFunction (
+            std::function<std::shared_ptr<ngraph::op::Op>()> _op_maker,
+            const std::map<std::string, std::string>& _attr_names_map = {},
+            const std::map<std::string, ov::Any>& _attr_values_map = {}) :
+        op_maker(_op_maker),
+        attr_names_map(_attr_names_map),
+        attr_values_map(_attr_values_map)
+    {}
+
+    ngraph::OutputVector operator() (std::shared_ptr<NodeContext> context) {
+        std::cerr << "[ INFO ] Activated OpExtension!\n";
+        auto node = op_maker();
+        node->set_arguments(context->get_ng_inputs());
+        FWVisitor fwvisitor(context, attr_names_map, attr_values_map);
+        node->visit_attributes(fwvisitor);
+        node->validate_and_infer_types();
+        return node->outputs();
+    }
+
+private:
+
+    std::function<std::shared_ptr<ngraph::op::Op>()> op_maker;
+    std::map<std::string, std::string> attr_names_map;
+    std::map<std::string, ov::Any> attr_values_map;
+};
+
+template <typename BaseConversionType, typename OVOpType>
+_OpExtensionBase<BaseConversionType, OVOpType>::_OpExtensionBase (const std::string& fw_type_name,
                                     const std::map<std::string, std::string>& attr_names_map,
                                     const std::map<std::string, ov::Any>& attr_values_map) :
-    ConversionExtension(
+    BaseConversionType(
             fw_type_name,
-            [attr_names_map, attr_values_map](std::shared_ptr<NodeContext> context) {
-                std::cerr << "[ INFO ] Activated OpExtension!\n";
-                auto node = std::make_shared<OVOpType>();
-                node->set_arguments(context->get_ng_inputs());
-                FWVisitor fwvisitor(context, attr_names_map, attr_values_map);
-                node->visit_attributes(fwvisitor);
-                node->validate_and_infer_types();
-                return node->outputs();
-            }
+            OpConversionFunction([](){ return std::make_shared<OVOpType>(); }, attr_names_map, attr_values_map)
     )
 {
         std::cerr << "[ INFO ] Registered OpExtension\n";
 }
 
-template <>
-class FRONTEND_API OpExtension<void> : public ConversionExtension { // TODO: Consider deriving from base Extension class
+template <typename BaseConversionType>
+class FRONTEND_API _OpExtensionBase<BaseConversionType, void> : public BaseConversionType { // TODO: Consider deriving from base Extension class
 public:
 
     // Default ctor is not available, you need to specify OV type with another ctor
-    OpExtension () = delete;
+    _OpExtensionBase () = delete;
 
     // Maps op with a given type in FW and matching OV type given in template parameter
-    OpExtension (
+    _OpExtensionBase (
             const std::string& fw_ov_type_name,
             const std::map<std::string, std::string>& attr_names_map = {},
             const std::map<std::string, std::string>& attr_values_map = {});
 
     // Maps op with a given type in FW and specified OV type given in template parameter
-    OpExtension (
+    _OpExtensionBase (
             const std::string& ov_type_name,
             const std::string& fw_type_name,
             const std::map<std::string, std::string>& attr_names_map = {},
@@ -245,3 +266,86 @@ public:
 }  // namespace frontend
 
 }  // namespace ngraph
+
+
+
+namespace ov
+{
+    namespace frontend
+    {
+        class ConversionExtension : public ngraph::frontend::_ConversionExtensionBase {
+            // TODO: Extend to domain and version
+
+            using ngraph::frontend::_ConversionExtensionBase::_ConversionExtensionBase;
+        };
+
+        template <typename OVOpType = void>
+        using OpExtension = ngraph::frontend::_OpExtensionBase<ConversionExtension, OVOpType>;
+    }
+}
+
+// TODO: Move to ONNX front end extension header
+namespace ov
+{
+    namespace frontend
+    {
+        namespace onnx
+        {
+            class ConversionExtension : public ngraph::frontend::_ConversionExtensionBase {
+                // TODO: Extend to domain and version
+
+                using ngraph::frontend::_ConversionExtensionBase::_ConversionExtensionBase;
+            };
+
+            template <typename OVOpType = void>
+            using OpExtension = ngraph::frontend::_OpExtensionBase<ConversionExtension, OVOpType>;
+        }
+    }
+}
+
+// TODO: Move to PaddlePaddle front end extension header
+namespace ov
+{
+    namespace frontend
+    {
+        namespace paddlepaddle
+        {
+            class ConversionExtension : public ngraph::frontend::_ConversionExtensionBase {
+                // TODO: Extend to domain and version
+
+                using ngraph::frontend::_ConversionExtensionBase::_ConversionExtensionBase;
+            };
+
+            template <typename OVOpType = void>
+            using OpExtension = ngraph::frontend::_OpExtensionBase<ConversionExtension, OVOpType>;
+        }
+    }
+}
+
+// TODO: Remove this section after experiments
+//////////////////////////////////////////////
+
+#define GET_OPENVINO_FRAMEWORK_MAP_MACRO(_1,_2,_3,NAME,...) NAME
+#define OPENVINO_FRAMEWORK_MAP(...) GET_OPENVINO_FRAMEWORK_MAP_MACRO(__VA_ARGS__, _OPENVINO_FRAMEWORK_MAP_3, _OPENVINO_FRAMEWORK_MAP_2, _OPENVINO_FRAMEWORK_MAP_1)(__VA_ARGS__)
+
+// Per each FRAMEWORK this macro can be used once in one operation class definition
+// It defines a member inline function that creates required extension.
+#define _OPENVINO_FRAMEWORK_MAP_3(FRAMEWORK, ATTR_NAME_MAP, ATTR_VALUE_MAP)   \
+    auto __openvino_framework_map_helper_##FRAMEWORK () -> std::decay<decltype(*this)>::type; \
+    static auto __openvino_framework_map_##FRAMEWORK () ->\
+            std::shared_ptr<::ov::frontend::FRAMEWORK::OpExtension<std::result_of<__openvino_framework_map_helper_##FRAMEWORK>::type>> { \
+        return std::make_shared<::ov::frontend::FRAMEWORK::OpExtension<std::result_of<__openvino_framework_map_helper_##FRAMEWORK>::type>>(ATTR_NAME_MAP, ATTR_VALUE_MAP);   \
+    }
+
+#define _OPENVINO_FRAMEWORK_MAP_1(FRAMEWORK)   \
+    template <typename T> \
+    struct __openvino_framework_map_helper_##FRAMEWORK { \
+    static auto get () -> \
+            std::shared_ptr<::ov::frontend::FRAMEWORK::OpExtension<T>>  { \
+        return std::make_shared<::ov::frontend::FRAMEWORK::OpExtension<T>>();   \
+    }\
+    }; \
+    auto __openvino_framework_map_##FRAMEWORK () -> __openvino_framework_map_helper_##FRAMEWORK<typename std::decay<decltype(*this)>::type> {throw 0;}
+
+//////////////////////////////////////////////
+// END

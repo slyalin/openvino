@@ -15,6 +15,7 @@
 #include "ie_iextension.h"
 #include "ngraph/op/op.hpp"
 #include "openvino/core/op_extension.hpp"
+#include "frontend_manager/extension.hpp"
 #include "openvino/runtime/core.hpp"
 
 using namespace testing;
@@ -230,6 +231,7 @@ public:
 class CustomNewIdentity : public ov::op::Op {
 public:
     OPENVINO_OP("Identity")
+    OPENVINO_FRAMEWORK_MAP(onnx)
 
     CustomNewIdentity() = default;
     CustomNewIdentity(const ov::Output<ov::Node>& arg) : Op({arg}) {

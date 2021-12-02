@@ -4,14 +4,21 @@
 
 #pragma once
 
+#include <type_traits>
+
 #include <openvino/op/op.hpp>
+#include <frontend_manager/extension.hpp>
 
 //! [op:header]
 namespace TemplateExtension {
 
+
+
 class Identity : public ov::op::Op {
 public:
     OPENVINO_OP("Identity");
+    //OPENVINO_FRAMEWORK_MAP(onnx, {}, {});
+    //OPENVINO_FRAMEWORK_MAP(onnx);
 
     Identity() = default;
     Identity(const ov::Output<ov::Node>& arg);

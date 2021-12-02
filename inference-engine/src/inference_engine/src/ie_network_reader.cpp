@@ -488,8 +488,11 @@ CNNNetwork details::ReadNetwork(const std::string& modelPath,
 
         // TODO: Remove the following block
         // This is an example of new extension application in the shortest form
+
+        //FE->add_extension(ov::frontend::OpExtension<ov::opset7::Subtract>("Add", {}, {{"auto_broadcast", "NUMPY"}}));
+        FE->add_extension(ov::frontend::onnx::OpExtension<ov::opset7::Subtract>("Add", {}, {{"auto_broadcast", "NONE"}}));
+        //FE->add_extension(ov::frontend::paddlepaddle::OpExtension<ov::opset7::Subtract>("Add", {}, {{"auto_broadcast", "NONE"}}));
         /*
-        FE->add_extension(ngraph::frontend::OpExtension<ov::opset7::Subtract>("Add", {}, {{"auto_broadcast", "NUMPY"}}));
         FE->add_extension(ngraph::frontend::OpExtension<ov::opset7::Convolution>(
             "Conv",
             {{"pads_begin", "strides"}},

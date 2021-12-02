@@ -4,6 +4,8 @@
 import sys
 import os
 
+sys.exit(0)
+
 import numpy as np
 import paddle as pdpd
 

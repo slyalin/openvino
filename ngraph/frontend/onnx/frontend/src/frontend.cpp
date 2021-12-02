@@ -207,7 +207,14 @@ void FrontEndONNX::add_extension(const std::shared_ptr<ov::Extension>& extension
         m_telemetry = telemetry;
     }
 
-    if (auto newop = std::dynamic_pointer_cast<ngraph::frontend::ConversionExtension>(extension)) {
+    std::shared_ptr<ngraph::frontend::_ConversionExtensionBase> newop =
+            std::dynamic_pointer_cast<ov::frontend::ConversionExtension>(extension);
+
+    if (!newop) {
+        newop = std::dynamic_pointer_cast<ov::frontend::onnx::ConversionExtension>(extension);
+    }
+
+    if (newop) {
         std::cerr << "++++++++++++++++REGISTER NEW OP+++++++++: " << newop->m_optype << '\n';
         for (int i = 1; i < 13; ++i)
             ngraph::onnx_import::register_operator(newop->m_optype, i, "", [=](const ngraph::onnx_import::Node &context) {
