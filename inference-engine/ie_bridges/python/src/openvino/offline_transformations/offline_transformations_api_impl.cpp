@@ -8,6 +8,7 @@
 #include <ngraph/opsets/opset6.hpp>
 #include <ngraph/pass/constant_folding.hpp>
 #include <ngraph/pass/low_latency.hpp>
+#include <openvino/pass/make_internally_dynamic.hpp>
 #include <ngraph/pass/manager.hpp>
 #include <openvino/pass/make_stateful.hpp>
 #include <pot_transformations.hpp>
@@ -41,6 +42,12 @@ void InferenceEnginePython::ApplyMakeStatefulTransformation(InferenceEnginePytho
                                                             std::map<std::string, std::string>& param_res_names) {
     ngraph::pass::Manager manager;
     manager.register_pass<ov::pass::MakeStateful>(param_res_names);
+    manager.run_passes(network.actual->getFunction());
+}
+
+void InferenceEnginePython::ApplyMakeInternallyDynamicTransformation(InferenceEnginePython::IENetwork network) {
+    ngraph::pass::Manager manager;
+    manager.register_pass<ov::pass::MakeInternallyDynamic>();
     manager.run_passes(network.actual->getFunction());
 }
 

@@ -21,6 +21,8 @@ void ApplyLowLatencyTransformation(InferenceEnginePython::IENetwork network, boo
 void ApplyMakeStatefulTransformation(InferenceEnginePython::IENetwork network,
                                      std::map<std::string, std::string>& param_res_names);
 
+void ApplyMakeInternallyDynamicTransformation(InferenceEnginePython::IENetwork network);
+
 void ApplyPruningTransformation(InferenceEnginePython::IENetwork network);
 
 void GenerateMappingFile(InferenceEnginePython::IENetwork network, std::string path, bool extract_names);

@@ -6,6 +6,7 @@
 
 #include "ngraph/pass/low_latency.hpp"
 #include "ngraph/pass/manager.hpp"
+#include "openvino/pass/make_internally_dynamic.hpp"
 
 using namespace InferenceEngine;
 
@@ -22,5 +23,13 @@ void InferenceEngine::lowLatency2(InferenceEngine::CNNNetwork& network, bool use
     auto function = network.getFunction();
     ngraph::pass::Manager manager;
     manager.register_pass<ngraph::pass::LowLatency2>(use_const_initializer);
+    manager.run_passes(function);
+}
+
+
+void InferenceEngine::MakeInternallyDynamic(InferenceEngine::CNNNetwork& network) {
+    auto function = network.getFunction();
+    ngraph::pass::Manager manager;
+    manager.register_pass<ov::pass::MakeInternallyDynamic>();
     manager.run_passes(function);
 }
