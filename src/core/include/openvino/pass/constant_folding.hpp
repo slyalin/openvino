@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "openvino/core/variant.hpp"
+#include "openvino/core/runtime_attribute.hpp"
 #include "openvino/pass/pass.hpp"
 
 namespace ov {
@@ -32,14 +32,10 @@ OPENVINO_API void enable_constant_folding(const std::shared_ptr<Node>& node);
 
 OPENVINO_API bool constant_folding_is_disabled(const std::shared_ptr<Node>& node);
 
-class OPENVINO_API DisableConstantFolding : public VariantImpl<bool> {
+class OPENVINO_API DisableConstantFolding : public ov::RuntimeAttribute {
 public:
-    OPENVINO_RTTI("disabled_constant_folding", "0");
-
-    DisableConstantFolding() {}  // TODO: revert this line, to be compilable with old gcc
-
-    DisableConstantFolding(const value_type& value) : VariantImpl<value_type>(value) {}
-
+    OPENVINO_RTTI("DisableConstantFolding");
+    DisableConstantFolding() {}
     bool is_copyable() const override {
         return false;
     }
