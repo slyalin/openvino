@@ -47,7 +47,7 @@ public:
     OPENVINO_RTTI(typeid(VT).name(), "0");
     using value_type = VT;
 
-    VariantImpl() = default;
+    VariantImpl() {}// TODO: revert this line, to be compilable with old gcc
 
     VariantImpl(const value_type& value) : m_value(value) {}
 

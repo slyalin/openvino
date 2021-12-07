@@ -36,7 +36,7 @@ class OPENVINO_API DisableConstantFolding : public VariantImpl<bool> {
 public:
     OPENVINO_RTTI("disabled_constant_folding", "0");
 
-    DisableConstantFolding() = default;
+    DisableConstantFolding() {}  // TODO: revert this line, to be compilable with old gcc
 
     DisableConstantFolding(const value_type& value) : VariantImpl<value_type>(value) {}
 
