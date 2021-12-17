@@ -515,10 +515,30 @@ void MKLDNNNode::execute(mkldnn::stream strm) {
     }
 }
 
+#if 0
+namespace {
+
+    void print_dims(const std::vector<size_t> &dims) {
+        std::cerr << '[';
+        if (!dims.empty()) {
+            std::cerr << dims[0];
+            for (size_t i = 1; i < dims.size(); ++i)
+                std::cerr << ", " << dims[i];
+        }
+        std::cerr << ']';
+    }
+} // namespace
+#endif
+
 void MKLDNNNode::executeDynamic(mkldnn::stream strm) {
     if (needShapeInfer()) {
         redefineOutputMemory(shapeInfer());
     }
+#if 0
+    std::cerr << "[ INFO ] Shapes for " << this->name << ": ";
+    print_dims(getChildEdgesAtPort(0)[0]->getMemory().getDesc().getShape().getDims());
+    std::cerr << "\n";
+#endif
     if (isExecutable()) {
         if (needPrepareParams()) {
             IE_ASSERT(inputShapesDefined()) << "Can't prepare params for " << getTypeStr() << " node with name: " << getName() <<

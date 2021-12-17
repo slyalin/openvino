@@ -5,6 +5,7 @@
 #include "proposal_imp.hpp"
 
 #include <cstring>
+#include <iostream>
 #include <cmath>
 #include <string>
 #include <vector>
@@ -379,6 +380,9 @@ void proposal_exec(const float* input0, const float* input1,
                           p_roi_item + n * conf.post_nms_topn_ * 5,
                           conf.post_nms_topn_, conf.normalize_, img_H, img_W, conf.clip_after_nms, p_probs);
     }
+
+    // Uncomment to print the number of detected ROIs
+    //std::cerr << "[ INFO ] num_rois = " << num_rois << "\n";
 }
 
 

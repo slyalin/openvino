@@ -889,9 +889,24 @@ inline void MKLDNNDetectionOutputNode::generateOutput(float* reorderedConfData, 
         }
     }
 
+    // Uncomment to see the number of real detections made
+    //std::cerr << "[ INFO ] DetectionOutput count: " << count << "\n";
+
+
     if (count < numResults) {
+#if 1   // change it to 0 to switch synthetic mode on
         // marker at end of boxes list
         dstData[count * DETECTION_SIZE + 0] = -1;
+#else
+        // duplicate the last detection to all remaining items of output tensor to emulate maximum possible detection count
+        assert(count > 0);
+        for (size_t i = count; i < numResults-1; ++i)
+            for (size_t j = 0; j < 7; ++j)
+                // works if there was at least one real detection
+                dstData[i * DETECTION_SIZE + j] = dstData[(count-1) * DETECTION_SIZE + j];
+        std::cerr << "[ INFO ] Padded up to " << numResults-1 << "\n";
+        dstData[(numResults-1) * DETECTION_SIZE + 0] = -1;
+#endif
     }
 }
 

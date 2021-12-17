@@ -30,6 +30,9 @@
 #include "utils.hpp"
 // clang-format on
 
+#include <openvino/pass/manager.hpp>
+#include <openvino/pass/make_internally_dynamic.hpp>
+
 using namespace InferenceEngine;
 
 static const size_t progressBarDefaultTotalCount = 1000;
@@ -408,6 +411,13 @@ int main(int argc, char* argv[]) {
 
             auto startTime = Time::now();
             CNNNetwork cnnNetwork = ie.ReadNetwork(FLAGS_m);
+
+            {
+                ov::pass::Manager m;
+                m.register_pass<ov::pass::MakeInternallyDynamic>();
+                m.run_passes(cnnNetwork.getFunction());
+            }
+
             auto duration_ms = double_to_string(get_duration_ms_till_now(startTime));
             slog::info << "Read network took " << duration_ms << " ms" << slog::endl;
             if (statistics)

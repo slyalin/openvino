@@ -35,7 +35,7 @@ OPENVINO_API bool constant_folding_is_disabled(const std::shared_ptr<Node>& node
 class OPENVINO_API DisableConstantFolding : public ov::RuntimeAttribute {
 public:
     OPENVINO_RTTI("DisableConstantFolding");
-    DisableConstantFolding() = default;
+    DisableConstantFolding() {}
     bool is_copyable() const override {
         return false;
     }

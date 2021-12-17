@@ -89,6 +89,7 @@
 #include <ngraph/op/util/op_types.hpp>
 #include <ngraph/pass/manager.hpp>
 #include <ngraph/graph_util.hpp>
+#include <openvino/pass/make_internally_dynamic.hpp>
 
 #include <transformations/common_optimizations/lin_op_sequence_fusion.hpp>
 
@@ -170,6 +171,12 @@ static void TransformationUpToCPUSpecificOpSet(std::shared_ptr<ngraph::Function>
 
     static const auto precisions = get_convert_precisions();
 
+    {
+        const char* flag = getenv("_OPENVINO_MAKE_INTERNALLY_DYNAMIC");
+        if (flag && std::strcmp(flag, "1") == 0) {
+            manager.register_pass<ov::pass::MakeInternallyDynamic>();
+        }
+    }
     manager.register_pass<ngraph::pass::CommonOptimizations>();
     manager.register_pass<ngraph::pass::WrapInterpolateIntoTransposes>();
     manager.register_pass<ngraph::pass::TransposeSinking>();

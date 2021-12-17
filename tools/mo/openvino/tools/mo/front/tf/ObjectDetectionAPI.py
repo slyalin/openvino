@@ -966,7 +966,7 @@ class ObjectDetectionAPIDetectionOutputReplacement(FrontReplacementFromConfigFil
         # "0" value in the Reshape layer attribute to refer to the batch size, but we know how to
         # calculate the second dimension so the batch value will be deduced from it with help of "-1".
         reshape_conf_node = create_op_node_with_second_input(graph, Reshape,
-                                                             int64_array([-1, (num_classes + 1) * max_proposals]),
+                                                             int64_array([1, -1]),
                                                              dict(name='do_reshape_conf'), activation_conf_node)
         mark_as_correct_data_layout(reshape_conf_node)
 
@@ -1029,9 +1029,9 @@ class ObjectDetectionAPIDetectionOutputReplacement(FrontReplacementFromConfigFil
         # "0" value in the Reshape layer attribute to refer to the batch size, but we know how to
         # calculate the second dimension so the batch value will be deduced from it with help of "-1".
         if share_box_across_classes:
-            reshape_shape = int64_array([-1, max_proposals * 4])
+            reshape_shape = int64_array([1, -1])
         else:
-            reshape_shape = int64_array([-1, (num_classes + 1) * max_proposals * 4])
+            reshape_shape = int64_array([1, -1])
         Const(graph, {'value': reshape_shape, 'name': flattened_offsets.name + '/Dim'}).create_node().out_port(0).\
             connect(flattened_offsets.in_port(1))
         mark_as_correct_data_layout(flattened_offsets)
@@ -1050,7 +1050,7 @@ class ObjectDetectionAPIDetectionOutputReplacement(FrontReplacementFromConfigFil
             proposal = add_convolution_to_swap_xy_coordinates(graph, proposal, 4)
 
         # reshape priors boxes as Detection Output expects
-        reshape_priors = create_op_node_with_second_input(graph, Reshape, int64_array([-1, 1, max_proposals * 4]),
+        reshape_priors = create_op_node_with_second_input(graph, Reshape, int64_array([1, 1, -1]),
                                                           dict(name='DetectionOutput_reshape_priors_'), proposal)
         mark_as_correct_data_layout(reshape_priors)
 
@@ -1514,7 +1514,7 @@ class ObjectDetectionAPIProposalReplacement(FrontReplacementFromConfigFileSubGra
             proposal_reshape_2d.out_port(0).connect(crop_and_resize_node.in_port(1))
 
         tf_proposal_reshape_4d = create_op_node_with_second_input(graph, Reshape,
-                                                                  int64_array([-1, 1, max_proposals, 5]),
+                                                                  int64_array([1, 1, -1, 5]),
                                                                   dict(name="reshape_proposal_4d"), proposal)
         mark_as_correct_data_layout(tf_proposal_reshape_4d)
 
