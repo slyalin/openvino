@@ -278,7 +278,7 @@ public:
 }  // namespace
 
 
-bool ov::pass::MakeInternallyDynamic::run_on_function (std::shared_ptr<ov::Function> f) {
+bool ov::pass::MakeInternallyDynamic::run_on_function (std::shared_ptr<ov::Model> f) {
     ov::pass::Manager manager;
 
     manager.register_pass<SaveResultShapes>();

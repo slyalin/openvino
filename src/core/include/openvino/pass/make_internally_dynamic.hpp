@@ -16,13 +16,13 @@ namespace pass {
  * to keep only a filled part. It introduce dynamic shapes flow because the shape of filled part is not known
  * statically in advance. Relevant operations: DetectionOutput, Proposal.
  */
-class OPENVINO_API MakeInternallyDynamic : public FunctionPass {
+class OPENVINO_API MakeInternallyDynamic : public ModelPass {
 public:
     OPENVINO_RTTI("MakeInternallyDynamic");
 
     explicit MakeInternallyDynamic()  {}
 
-    bool run_on_function(std::shared_ptr<ov::Function> f) override;
+    bool run_on_function(std::shared_ptr<ov::Model> f) override;
 
 };
 }  // namespace pass
