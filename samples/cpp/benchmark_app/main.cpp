@@ -411,13 +411,18 @@ int main(int argc, char* argv[]) {
 
             auto startTime = Time::now();
             CNNNetwork cnnNetwork = ie.ReadNetwork(FLAGS_m);
-
+/*
             {
                 ov::pass::Manager m;
                 m.register_pass<ov::pass::MakeInternallyDynamic>();
                 m.run_passes(cnnNetwork.getFunction());
             }
 
+            std::string new_name = FLAGS_m;
+            new_name = new_name.substr(new_name.rfind('/') + 1, std::string::npos);
+            cnnNetwork.serialize(new_name);
+            return 0;
+*/
             auto duration_ms = double_to_string(get_duration_ms_till_now(startTime));
             slog::info << "Read network took " << duration_ms << " ms" << slog::endl;
             if (statistics)

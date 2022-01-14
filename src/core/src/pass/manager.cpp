@@ -19,6 +19,7 @@
 #include "ngraph/pass/graph_rewrite.hpp"
 #include "ngraph/pass/pass.hpp"
 #include "ngraph/pass/visualize_tree.hpp"
+#include "ngraph/pass/serialize.hpp"
 #include "ngraph/util.hpp"
 #include "openvino/util/env_util.hpp"
 #include "perf_counters.hpp"
@@ -38,7 +39,8 @@ PerfCounters& perf_counters() {
 
 ov::pass::Manager::Manager()
     : m_pass_config(std::make_shared<PassConfig>()),
-      m_visualize(ov::util::getenv_bool("NGRAPH_ENABLE_VISUALIZE_TRACING")) {}
+      m_visualize(ov::util::getenv_bool("NGRAPH_ENABLE_VISUALIZE_TRACING")),
+      m_serialize(ov::util::getenv_bool("NGRAPH_ENABLE_SERIALIZE_TRACING")){}
 
 ov::pass::Manager::~Manager() = default;
 
@@ -54,7 +56,7 @@ void ov::pass::Manager::run_passes(shared_ptr<ov::Model> func) {
 
     static bool profile_enabled = ov::util::getenv_bool("NGRAPH_PROFILE_PASS_ENABLE");
 
-    size_t index = 0;
+    static size_t index = 0;
     ngraph::stopwatch pass_timer;
     ngraph::stopwatch overall_timer;
     overall_timer.start();
@@ -108,7 +110,7 @@ void ov::pass::Manager::run_passes(shared_ptr<ov::Model> func) {
             }
         }
 
-        if (m_visualize) {
+        if (m_visualize || m_serialize) {
             // visualizations and serializations will be named after the outermost function
             const size_t num_digits_in_pass_index = 3;
             std::string index_str = std::to_string(index);
@@ -120,6 +122,22 @@ void ov::pass::Manager::run_passes(shared_ptr<ov::Model> func) {
                 auto file_ext = format.empty() ? "svg" : format;
                 pass::VisualizeTree vt(base_filename + std::string(".") + file_ext);
                 vt.run_on_model(func);
+            }
+            if (m_serialize) {
+                static bool serialization_nest = false;
+                if (!serialization_nest) {
+                    try {
+                        serialization_nest = true;
+                        pass::Serialize serialize(base_filename + ".xml", base_filename + ".bin");
+                        serialize.run_on_model(func);
+                        serialization_nest = false;
+                    } catch (...) {
+                        serialization_nest = false;
+                        throw;
+                    }
+                } else {
+                    std::cerr << "[ WARNING ] Not entering serialization code for " << base_filename << '\n';
+                }
             }
         }
         index++;

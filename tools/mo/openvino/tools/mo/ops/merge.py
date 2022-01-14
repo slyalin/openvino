@@ -15,6 +15,7 @@ class Merge(Op):
         mandatory_props = {
             'op': self.op,
             'infer': self.merge_infer,
+            'version': 'opset10',
             'cf_infer': self.control_flow_infer,
         }
         super().__init__(graph, mandatory_props, attrs)

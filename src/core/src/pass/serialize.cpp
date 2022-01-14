@@ -1167,6 +1167,7 @@ pass::StreamSerialize::StreamSerialize(std::ostream& stream,
 OPENVINO_SUPPRESS_DEPRECATED_END
 
 bool pass::StreamSerialize::run_on_model(const std::shared_ptr<ngraph::Function>& f) {
+    std::cerr << "[ INFO ] ++++++++++++++ is about to serialize graph +++++++++++++++\n";
     /*
         Format:
         [ DataHeader  ]
