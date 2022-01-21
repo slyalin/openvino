@@ -820,6 +820,7 @@ void MKLDNNNonMaxSuppressionNode::execute(mkldnn::stream strm) {
 
     int *valid_outputs = reinterpret_cast<int *>(getChildEdgesAtPort(NMS_VALIDOUTPUTS)[0]->getMemoryPtr()->GetPtr());
     *valid_outputs = static_cast<int>(validOutputs);
+    //std::cerr << "slyalin: NMS valid_outputs = " << *valid_outputs << "\n";
 }
 
 bool MKLDNNNonMaxSuppressionNode::created() const {

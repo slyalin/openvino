@@ -564,14 +564,16 @@ static UNUSED void printPerformanceCounts(const std::map<std::string, ov::runtim
 
     for (const auto& it : performanceMap) {
         std::string toPrint(it.first);
-        const int maxLayerName = 30;
-
+        //const int maxLayerName = 1000;
+        toPrint = it.first;
+        /*
         if (it.first.length() >= maxLayerName) {
             toPrint = it.first.substr(0, maxLayerName - 4);
             toPrint += "...";
         }
+        */
 
-        stream << std::setw(maxLayerName) << std::left << toPrint;
+        stream << std::left << toPrint << "\t";
         switch (it.second.status) {
         case ov::runtime::ProfilingInfo::Status::EXECUTED:
             stream << std::setw(15) << std::left << "EXECUTED";
@@ -583,9 +585,9 @@ static UNUSED void printPerformanceCounts(const std::map<std::string, ov::runtim
             stream << std::setw(15) << std::left << "OPTIMIZED_OUT";
             break;
         }
-        stream << std::setw(30) << std::left << "layerType: " + std::string(it.second.node_type) + " ";
-        stream << std::setw(20) << std::left << "realTime: " + std::to_string(it.second.real_time.count());
-        stream << std::setw(20) << std::left << "cpu: " + std::to_string(it.second.cpu_time.count());
+        stream << std::setw(30) << std::left << "layerType: " + std::string(it.second.node_type) + "\t";
+        stream << std::setw(20) << std::left << "realTime: " + std::to_string(it.second.real_time.count()) + "\t";
+        stream << std::setw(20) << std::left << "cpu: " + std::to_string(it.second.cpu_time.count()) + "\t";
         stream << " execType: " << it.second.exec_type << std::endl;
         if (it.second.real_time.count() > 0) {
             totalTime += it.second.real_time;
@@ -998,14 +1000,17 @@ static UNUSED void printPerformanceCounts(std::vector<ov::runtime::ProfilingInfo
 
     for (const auto& it : performanceData) {
         std::string toPrint(it.node_name);
-        const int maxLayerName = 30;
+        //const int maxLayerName = 30;
 
+        /*
         if (it.node_name.length() >= maxLayerName) {
             toPrint = it.node_name.substr(0, maxLayerName - 4);
             toPrint += "...";
         }
+        */
+        toPrint = it.node_name;
 
-        stream << std::setw(maxLayerName) << std::left << toPrint;
+        stream << toPrint << "\t";
         switch (it.status) {
         case ov::runtime::ProfilingInfo::Status::EXECUTED:
             stream << std::setw(15) << std::left << "EXECUTED";
@@ -1017,9 +1022,10 @@ static UNUSED void printPerformanceCounts(std::vector<ov::runtime::ProfilingInfo
             stream << std::setw(15) << std::left << "OPTIMIZED_OUT";
             break;
         }
-        stream << std::setw(30) << std::left << "layerType: " + std::string(it.node_type) + " ";
-        stream << std::setw(20) << std::left << "realTime: " + std::to_string(it.real_time.count());
-        stream << std::setw(20) << std::left << "cpu: " + std::to_string(it.cpu_time.count());
+        stream << "\t";
+        stream << std::setw(30) << std::left << "layerType: " + std::string(it.node_type) + " \t";
+        stream << std::setw(20) << std::left << "realTime: " + std::to_string(it.real_time.count()) + "\t";
+        stream << std::setw(20) << std::left << "cpu: " + std::to_string(it.cpu_time.count()) + "\t";
         stream << " execType: " << it.exec_type << std::endl;
         if (it.real_time.count() > 0) {
             totalTime += it.real_time;
