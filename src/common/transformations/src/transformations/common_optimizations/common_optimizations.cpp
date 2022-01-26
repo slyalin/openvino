@@ -120,7 +120,7 @@ bool ngraph::pass::CommonOptimizations::run_on_model(const std::shared_ptr<ngrap
     // after support for FP16 IR is implemented
     manager.register_pass<ov::pass::ConvertCompressedOnlyToLegacy>();
 
-    manager.register_pass<ov::pass::MarkPrecisionSensitiveDivides>();
+    //manager.register_pass<ov::pass::MarkPrecisionSensitiveDivides>();
 
     // TODO: move to KMB
     manager.register_pass<ngraph::pass::WeightsDequantizeToFakeQuantize>();

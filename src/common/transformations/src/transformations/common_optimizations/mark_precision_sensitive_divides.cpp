@@ -27,13 +27,18 @@ bool ov::pass::MarkPrecisionSensitiveDivides::run_on_model(const std::shared_ptr
     };
 
     while (!nodes.empty()) {
+        std::cerr << "Nodes left: " << nodes.size() << "\n";
         auto curr_node = nodes.front();
         nodes.pop_front();
         if (visited.count(curr_node))
             continue;
         for (auto& input : curr_node->inputs()) {
-            if (ov::is_precision_sensitive(input))
-                ngraph::op::util::visit_shape_path(input.get_source_output().get_node_shared_ptr(), visited, markup_func);
+            if (ov::is_precision_sensitive(input)) {
+                std::cerr << ".";
+                ngraph::op::util::visit_shape_path(input.get_source_output().get_node_shared_ptr(), visited,
+                                                   markup_func);
+                std::cerr << ",";
+            }
         }
         visited.insert(curr_node);
 

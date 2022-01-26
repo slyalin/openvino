@@ -67,6 +67,9 @@ void ov::pass::Manager::run_passes(shared_ptr<ov::Model> func) {
             continue;
         }
 
+        std::cerr << "[ INFO ] Started transformation: " << pass->get_name() << "\n";
+        struct AD { AD(std::string name) : _name(name) {}; std::string _name; ~AD () { std::cerr << "[ INFO ] Finished transformation " << _name << "\n"; } } _ad(pass->get_name());
+
         OV_ITT_SCOPE(FIRST_INFERENCE, ov::itt::domains::nGraphPass_LT, pass::perf_counters()[pass->get_type_info()]);
 
         pass_timer.start();
