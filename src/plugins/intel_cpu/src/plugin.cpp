@@ -961,7 +961,8 @@ QueryNetworkResult Engine::QueryNetwork(const CNNNetwork& network, const std::ma
             }
 
             if (ngraph::op::is_constant(node) || ngraph::op::is_parameter(node)) {
-                if (!InferenceEngine::details::contains(supported, node->output(0).get_target_inputs().begin()->get_node()->get_friendly_name())) {
+                const auto& target_inputs = node->output(0).get_target_inputs();
+                if (target_inputs.empty() || !InferenceEngine::details::contains(supported, target_inputs.begin()->get_node()->get_friendly_name())) {
                     supported.erase(node->get_friendly_name());
                 }
             } else if (ngraph::op::is_output(node)) {
