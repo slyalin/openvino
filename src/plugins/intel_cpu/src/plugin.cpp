@@ -921,6 +921,10 @@ QueryNetworkResult Engine::QueryNetwork(const CNNNetwork& network, const std::ma
         auto ops = clonedNetwork.getFunction()->get_ordered_ops();
         std::unordered_set<std::string> supported;
         std::unordered_set<std::string> unsupported;
+
+        // collect all names of original nodes in the transformed graph in mentioned set:
+        std::unordered_set<std::string> mentioned;
+
         for (auto op : ops) {
             auto layerIsSupported = [&] {
                 std::unique_ptr<MKLDNNNode> ptr;
@@ -933,6 +937,7 @@ QueryNetworkResult Engine::QueryNetwork(const CNNNetwork& network, const std::ma
             } ();
             for (auto&& fusedLayerName : ngraph::getFusedNamesVector(op)) {
                 if (InferenceEngine::details::contains(originalOps, fusedLayerName)) {
+                    mentioned.emplace(fusedLayerName);
                     if (layerIsSupported) {
                         supported.emplace(fusedLayerName);
                     } else {
@@ -968,6 +973,16 @@ QueryNetworkResult Engine::QueryNetwork(const CNNNetwork& network, const std::ma
             } else if (ngraph::op::is_output(node)) {
                 if (!InferenceEngine::details::contains(supported, node->input_values().begin()->get_node()->get_friendly_name())) {
                     supported.erase(node->get_friendly_name());
+                }
+            }
+        }
+
+        // Add all names from original graph that are not mentioned in the transformed graph to supported
+
+        for(const auto& op: originalOps) {
+            if(!InferenceEngine::details::contains(mentioned, op)) {
+                if(!InferenceEngine::details::contains(supported, op)) {
+                    supported.emplace(op);
                 }
             }
         }
