@@ -9,6 +9,32 @@
 namespace ov {
 namespace frontend {
 namespace pytorch {
+    std::shared_ptr<Node> get_im2col_indices_along_dim(NodeContext& context,
+                                                    std::shared_ptr<Node> input_d,
+                                                    int64_t kernel_size_d,
+                                                    int64_t dilation_d,
+                                                    int64_t padding_d,
+                                                    int64_t stride_d) {
+        auto zero = context.mark_node(opset8::Constant::create(element::i64, Shape{}, {0}));
+        auto minus_one = context.mark_node(opset8::Constant::create(element::i64, Shape{}, {-1}));
+        auto kernel_size = context.mark_node(opset8::Constant::create(element::i64, Shape{}, {kernel_size_d}));
+        auto padding_2 = context.mark_node(opset8::Constant::create(element::i64, Shape{}, {padding_d * 2}));
+        auto stride = context.mark_node(opset8::Constant::create(element::i64, Shape{}, {stride_d}));
+        auto blocks_d = context.mark_node(std::make_shared<opset8::Add>(input_d, padding_2));
+        auto subtrahend =
+            context.mark_node(opset8::Constant::create(element::i64, Shape{}, {dilation_d * (kernel_size_d - 1)}));
+        blocks_d = context.mark_node(std::make_shared<opset8::Subtract>(blocks_d, subtrahend));
+        auto blocks_d_indices = context.mark_node(std::make_shared<opset8::Range>(zero, blocks_d, stride, element::i64));
+        blocks_d_indices = context.mark_node(std::make_shared<opset8::Unsqueeze>(blocks_d_indices, zero));
+        std::vector<int64_t> rng;
+        for (int64_t i = 0; i < kernel_size_d * dilation_d; i += dilation_d) {
+            rng.push_back(i);
+        }
+
+        auto kernel_grid = context.mark_node(opset8::Constant::create(element::i64, Shape{rng.size()}, rng));
+        auto kernel_mask = context.mark_node(std::make_shared<opset8::Unsqueeze>(kernel_grid, minus_one));
+        return context.mark_node(std::make_shared<opset8::Add>(blocks_d_indices, kernel_mask));
+    }
 namespace op {
 
 OutputVector translate_im2col(NodeContext& context) {
@@ -21,8 +47,8 @@ OutputVector translate_im2col(NodeContext& context) {
     FRONT_END_OP_CONVERSION_CHECK(kernel_size.size() == 2, "padding should contains 2 elements");
     auto stride = context.const_input<std::vector<int64_t>>(4);
     FRONT_END_OP_CONVERSION_CHECK(kernel_size.size() == 2, "stride should contains 2 elements");
-    auto input_shape = context.mark_node(std::make_shared<opset8::ShapeOf>(input));
     auto zero = context.mark_node(opset8::Constant::create(element::i64, Shape{}, {0}));
+    auto input_shape = context.mark_node(std::make_shared<opset8::ShapeOf>(input));
     auto zero_f = context.mark_node(opset8::Constant::create(element::f32, Shape{}, {0}));
     auto minus_one = context.mark_node(opset8::Constant::create(element::i64, Shape{1}, {-1}));
     auto two = context.mark_node(opset8::Constant::create(element::i64, Shape{}, {2}));
