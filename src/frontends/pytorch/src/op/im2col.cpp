@@ -38,7 +38,7 @@ std::shared_ptr<Node> get_im2col_indices_along_dim(NodeContext& context,
     auto kernel_mask = context.mark_node(std::make_shared<opset8::Unsqueeze>(kernel_grid, minus_one));
     return context.mark_node(std::make_shared<opset8::Add>(blocks_d_indices, kernel_mask));
 }
-}
+}  // namespace
 
 OutputVector translate_im2col(NodeContext& context) {
     auto input = context.get_input(0);
@@ -75,7 +75,8 @@ OutputVector translate_im2col(NodeContext& context) {
     auto input_c_squeezed = context.mark_node(std::make_shared<opset8::Squeeze>(input_c, zero));
     auto channel_unfolded = context.mark_node(std::make_shared<opset8::Multiply>(input_c_squeezed, kernel_window));
     auto channel_unfolded_unsqueezed = context.mark_node(std::make_shared<opset8::Unsqueeze>(channel_unfolded, zero));
-    auto output_shape = context.mark_node(std::make_shared<opset8::Concat>(OutputVector{input_b, channel_unfolded_unsqueezed, minus_one}, 0));
+    auto output_shape = context.mark_node(
+        std::make_shared<opset8::Concat>(OutputVector{input_b, channel_unfolded_unsqueezed, minus_one}, 0));
     auto pads = context.mark_node(
         opset8::Constant::create(element::i64, Shape{4}, std::vector<int64_t>{0, 0, padding_h, padding_w}));
     auto padded_input =
