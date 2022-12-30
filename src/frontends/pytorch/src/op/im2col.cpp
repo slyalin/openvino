@@ -9,6 +9,8 @@
 namespace ov {
 namespace frontend {
 namespace pytorch {
+namespace op {
+namespace {
 std::shared_ptr<Node> get_im2col_indices_along_dim(NodeContext& context,
                                                    ov::Output<Node> input_d,
                                                    int64_t kernel_size_d,
@@ -36,7 +38,7 @@ std::shared_ptr<Node> get_im2col_indices_along_dim(NodeContext& context,
     auto kernel_mask = context.mark_node(std::make_shared<opset8::Unsqueeze>(kernel_grid, minus_one));
     return context.mark_node(std::make_shared<opset8::Add>(blocks_d_indices, kernel_mask));
 }
-namespace op {
+}
 
 OutputVector translate_im2col(NodeContext& context) {
     auto input = context.get_input(0);
