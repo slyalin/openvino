@@ -92,6 +92,8 @@ class PytorchLayerTest:
             fw_res = (fw_res,)
 
         output_list = list(infer_res.values())
+        if None in fw_res:
+            fw_res = [tensor for tensor in fw_res if tensor is not None]
         assert len(fw_res) == len(
             output_list), f'number of outputs not equal, {len(fw_res)} != {len(output_list)}'
         # check if results dtypes match

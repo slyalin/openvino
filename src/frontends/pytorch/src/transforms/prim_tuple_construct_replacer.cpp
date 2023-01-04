@@ -29,7 +29,12 @@ bool DecomposeTupleResults::run_on_model(const std::shared_ptr<Model>& model) {
         }
         auto inputs = input_node->inputs();
         for (auto input : inputs) {
-            model->add_results({std::make_shared<opset8::Result>(input.get_source_output())});
+            auto out = input.get_source_output();
+            auto const_out = cast_fw_node(out.get_node_shared_ptr(), "prim::Constant");
+            if (const_out != nullptr && !const_out->get_input_descriptions_size()){
+                continue;
+            }
+            model->add_results({std::make_shared<opset8::Result>(out)});
         }
 
         model->remove_result(result);
