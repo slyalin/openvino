@@ -22,6 +22,11 @@ class TestTupleConstruct(PytorchLayerTest):
 
             def forward(self, x):
                 return (x, None)
+
+        class prim_tuple_construct_with_list(torch.nn.Module):
+
+            def forward(self, x):
+                return (x, [x, x + x, x + x + x])
     
         class prim_tuple_construct_single_value(torch.nn.Module):
 
@@ -31,6 +36,7 @@ class TestTupleConstruct(PytorchLayerTest):
         cases = {
             "single": prim_tuple_construct_single_value,
             "multiple": prim_tuple_construct,
+            "list": prim_tuple_construct_with_list,
             "none": prim_tuple_construct_with_none
         }
 
@@ -39,7 +45,7 @@ class TestTupleConstruct(PytorchLayerTest):
 
         return model(), ref_net, "prim::TupleConstruct"
 
-    @pytest.mark.parametrize("case", ["single", "multiple", "none"])
+    @pytest.mark.parametrize("case", ["single", "multiple", "none", "list"])
     @pytest.mark.nightly
     def test_tuple_construct(self, case, ie_device, precision, ir_version):
         self._test(*self.create_model(case), ie_device, precision, ir_version)

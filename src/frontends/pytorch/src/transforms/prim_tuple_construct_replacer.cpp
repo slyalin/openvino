@@ -34,6 +34,14 @@ bool DecomposeTupleResults::run_on_model(const std::shared_ptr<Model>& model) {
             if (const_out != nullptr && !const_out->get_input_descriptions_size()){
                 continue;
             }
+            auto list_construct = cast_fw_node(out.get_node_shared_ptr(), "prim::ListConstruct");
+            if (list_construct != nullptr){
+                auto list_inputs = list_construct->input_values();
+                for (auto list_input: list_inputs){
+                    model->add_results({std::make_shared<opset8::Result>(list_input)});
+                }
+                continue;
+            }
             model->add_results({std::make_shared<opset8::Result>(out)});
         }
 

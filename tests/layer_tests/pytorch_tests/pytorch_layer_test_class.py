@@ -92,12 +92,20 @@ class PytorchLayerTest:
             fw_res = (fw_res,)
 
         output_list = list(infer_res.values())
-        if None in fw_res:
-            fw_res = [tensor for tensor in fw_res if tensor is not None]
-        assert len(fw_res) == len(
-            output_list), f'number of outputs not equal, {len(fw_res)} != {len(output_list)}'
+
+        flatten_fw_res = []
+        for res_item in fw_res:
+            if res_item is None:
+                continue
+            if isinstance(res_item, list):
+                flatten_fw_res.extend(res_item)
+                continue
+            flatten_fw_res.append(res_item)
+
+        assert len(flatten_fw_res) == len(
+            output_list), f'number of outputs not equal, {len(flatten_fw_res)} != {len(output_list)}'
         # check if results dtypes match
-        for fw_tensor, ov_tensor in zip(fw_res, output_list):
+        for fw_tensor, ov_tensor in zip(flatten_fw_res, output_list):
             if not isinstance(fw_tensor, torch.Tensor):
                 if np.isscalar(fw_tensor):
                     assert fw_tensor == np.array(ov_tensor).item()
@@ -118,8 +126,8 @@ class PytorchLayerTest:
         fw_eps = custom_eps if precision == 'FP32' else 5e-2
         is_ok = True
         for i in range(len(infer_res)):
-            cur_fw_res = fw_res[i].to(memory_format=torch.contiguous_format).numpy(
-            ) if isinstance(fw_res[i], torch.Tensor) else fw_res[i]
+            cur_fw_res = flatten_fw_res[i].to(memory_format=torch.contiguous_format).numpy(
+            ) if isinstance(flatten_fw_res[i], torch.Tensor) else flatten_fw_res[i]
             cur_ov_res = infer_res[compiled.output(i)]
             print(f"fw_re: {cur_fw_res};\n ov_res: {cur_ov_res}")
             if not np.allclose(cur_ov_res, cur_fw_res,
