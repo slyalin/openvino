@@ -18,7 +18,11 @@ OutputVector translate_log2(NodeContext& context) {
     auto log = context.mark_node(std::make_shared<opset8::Log>(x));
     auto log_f = context.mark_node(std::make_shared<opset8::Convert>(log, element::f32));
     auto res = context.mark_node(std::make_shared<opset8::Divide>(log_f, log2));
-    return {context.mark_node(std::make_shared<opset8::ConvertLike>(res, log))};
+    if (!x.get_element_type().is_integral()){
+        res = context.mark_node(std::make_shared<opset8::ConvertLike>(res, x));
+
+    }
+    return {res};
 };
 
 }  // namespace op
