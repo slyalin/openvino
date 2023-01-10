@@ -13,10 +13,12 @@ namespace op {
 
 OutputVector translate_log2(NodeContext& context) {
     auto x = context.get_input(0);
-    auto log2 = context.mark_node(opset8::Constant::create(element::f32, Shape{}, {0.693147180559945309}));
+    auto two = context.mark_node(opset8::Constant::create(element::f32, Shape{}, {2}));
+    auto log2 = context.mark_node(std::make_shared<opset8::Log>(two));
     auto log = context.mark_node(std::make_shared<opset8::Log>(x));
     auto log_f = context.mark_node(std::make_shared<opset8::Convert>(log, element::f32));
-    return {context.mark_node(std::make_shared<opset8::Divide>(log_f, log2))};
+    auto res = context.mark_node(std::make_shared<opset8::Divide>(log_f, log2));
+    return {context.mark_node(std::make_shared<opset8::ConvertLike>(res, log))};
 };
 
 }  // namespace op
