@@ -40,11 +40,9 @@ class TestDiv(PytorchLayerTest):
          np.array([0.8032,  0.2930, -0.8113, -0.2308])]
     ])
     @pytest.mark.parametrize(("input_type"), [
-        np.int32,
         np.float32
     ])
     @pytest.mark.parametrize(("other_type"), [
-        np.int32,
         np.float32
     ])
     @pytest.mark.parametrize('rounding_mode', ([
@@ -54,11 +52,40 @@ class TestDiv(PytorchLayerTest):
     ]))
 
     @pytest.mark.nightly
-    def test_div(self, input_array, input_type, other_array, other_type, rounding_mode, ie_device, precision, ir_version):
+    def test_div_float(self, input_array, input_type, other_array, other_type, rounding_mode, ie_device, precision, ir_version):
         self.input_array = input_array
         self.input_type = input_type
         self.other_array = other_array
         self.other_type = other_type
-        if input_type != np.float32 or other_type != np.float32:
-            pytest.xfail('OpenVINO does not support type promotion yet!')
+        self._test(*self.create_model(rounding_mode), ie_device, precision, ir_version)
+
+
+    @pytest.mark.parametrize(("input_array", "other_array"), [
+        [np.random.rand(5, 5), np.random.rand(1)],
+        [np.random.rand(5, 5, 1), np.random.rand(1)],
+        [np.random.rand(1, 1, 5, 5), np.random.rand(1)],
+        [np.random.rand(5, 5, 1), np.random.rand(5, 1)],
+        [np.random.rand(5, 5), np.random.rand(5, 5)],
+    ])
+    @pytest.mark.parametrize(("input_type"), [
+        np.float32,
+        np.int32
+    ])
+    @pytest.mark.parametrize(("other_type"), [
+        np.float32,
+        np.int32
+    ])
+    @pytest.mark.parametrize('rounding_mode', ([
+        None,
+        "floor",
+        "trunc"
+    ]))
+    # OV does not support type promotion yet
+    @pytest.mark.xfail
+    @pytest.mark.nightly
+    def test_div_mixed(self, input_array, input_type, other_array, other_type, rounding_mode, ie_device, precision, ir_version):
+        self.input_array = input_array
+        self.input_type = input_type
+        self.other_array = other_array
+        self.other_type = other_type
         self._test(*self.create_model(rounding_mode), ie_device, precision, ir_version)
