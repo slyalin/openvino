@@ -30,10 +30,6 @@ bool DecomposeTupleResults::run_on_model(const std::shared_ptr<Model>& model) {
         auto inputs = input_node->inputs();
         for (auto input : inputs) {
             auto out = input.get_source_output();
-            auto const_out = cast_fw_node(out.get_node_shared_ptr(), "prim::Constant");
-            if (const_out != nullptr && !const_out->get_input_descriptions_size()){
-                continue;
-            }
             auto list_construct = cast_fw_node(out.get_node_shared_ptr(), "prim::ListConstruct");
             if (list_construct != nullptr){
                 auto list_inputs = list_construct->input_values();

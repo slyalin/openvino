@@ -87,7 +87,7 @@ class TestPrimMax(PytorchLayerTest):
 
         class prim_max_2_list_values(torch.nn.Module):
             def forward(self, x:float,  y:float):
-                return max([x, x+y], [y, y-x])
+                return torch.tensor(max([x, x+y], [y, y-x]))
 
         class prim_max_1list_several_values(torch.nn.Module):
 
