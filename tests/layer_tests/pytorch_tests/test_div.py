@@ -60,4 +60,6 @@ class Testdiv(PytorchLayerTest):
         self.input_type = input_type
         self.other_array = other_array
         self.other_type = other_type
+        if input_type != np.float32 or other_type != np.float32:
+            pytest.xfail('OpenVINO does not support type promotion yet!')
         self._test(*self.create_model(rounding_mode), ie_device, precision, ir_version)
