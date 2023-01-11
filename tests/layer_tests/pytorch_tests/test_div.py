@@ -27,11 +27,11 @@ class TestDiv(PytorchLayerTest):
         return aten_div(rounding_mode), ref_net, "aten::div"
 
     @pytest.mark.parametrize(("input_array", "other_array"), [
-        [np.random.rand(5, 5), np.random.rand(1)],
-        [np.random.rand(5, 5, 1), np.random.rand(1)],
-        [np.random.rand(1, 1, 5, 5), np.random.rand(1)],
-        [np.random.rand(5, 5, 1), np.random.rand(5, 1)],
-        [np.random.rand(5, 5), np.random.rand(5, 5)],
+        [np.random.uniform(low=0.1, high=1.0, size=(5, 5)), np.random.rand(1)],
+        [np.random.uniform(low=0.1, high=1.0, size=(5, 5, 1)), np.random.rand(1)],
+        [np.random.uniform(low=0.1, high=1.0, size=(1, 1, 5, 5)), np.random.rand(1)],
+        [np.random.uniform(low=0.1, high=1.0, size=(5, 5, 1)), np.random.rand(5, 1)],
+        [np.random.uniform(low=0.1, high=1.0, size=(5, 5)), np.random.rand(5, 5)],
         [np.array([ 0.7620,  2.5548, -0.5944, -0.7438,  0.9274]), np.array(0.5)],
         [np.array([[-0.3711, -1.9353, -0.4605, -0.2917],
                    [ 0.1815, -1.0111,  0.9805, -1.5923],
@@ -61,11 +61,11 @@ class TestDiv(PytorchLayerTest):
 
 
     @pytest.mark.parametrize(("input_array", "other_array"), [
-        [np.random.rand(5, 5), np.random.rand(1)],
-        [np.random.rand(5, 5, 1), np.random.rand(1)],
-        [np.random.rand(1, 1, 5, 5), np.random.rand(1)],
-        [np.random.rand(5, 5, 1), np.random.rand(5, 1)],
-        [np.random.rand(5, 5), np.random.rand(5, 5)],
+        [np.random.uniform(low=0.1, high=1.0, size=(5, 5)), np.random.rand(1)],
+        [np.random.uniform(low=0.1, high=1.0, size=(5, 5, 1)), np.random.rand(1)],
+        [np.random.uniform(low=0.1, high=1.0, size=(1, 1, 5, 5)), np.random.rand(1)],
+        [np.random.uniform(low=0.1, high=1.0, size=(5, 5, 1)), np.random.rand(5, 1)],
+        [np.random.uniform(low=0.1, high=1.0, size=(5, 5)), np.random.rand(5, 5)],
     ])
     @pytest.mark.parametrize(("input_type"), [
         np.float32,
