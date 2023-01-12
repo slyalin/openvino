@@ -41,9 +41,9 @@ def ivalue_to_constant(ivalue):
             ovshape = PartialShape(ivalue.size())
             ovtype = pt_to_ov_type_map[ivalue.type()]
             ov_const = make_constant(ovtype, ovshape.get_shape(), ivalue.data_ptr())
-        except RuntimeError:
+        except Exception:
             # old variant that makes a slow data copying
-            warnings.warn("[ WARNING ] Constant wasn't able to convert from data_ptr.")
+            print("[ WARNING ] Constant wasn't able to convert from data_ptr.")
             nvalues = ivalue.numpy()
             ovtype = np_to_ov_type_map[str(nvalues.dtype)]
             ovshape = PartialShape(nvalues.shape)
@@ -297,8 +297,8 @@ class TorchScriptPythonDecoder (Decoder):
         if pt_value.isCompleteTensor():
             try:
                 ivalue = ivalue.to(memory_format=torch.contiguous_format).detach().cpu()
-            except RuntimeError:
-                warnings.warn("[ WARNING ] Tensor couldn't detach")
+            except Exception:
+                 warnings.warn("[ WARNING ] Tensor couldn't detach")
             if str(pt_value.type().dtype()) in pt_to_ov_type_map:
                 # Constant interpretation doesn't respect new-full type of PT
                 # It recognizes only tensors, and give lists as 1D tensors, and scalars as Tensor scalars
@@ -312,7 +312,7 @@ class TorchScriptPythonDecoder (Decoder):
                     # TODO Check strides and pass them somehow
                     values = ivalue.data_ptr()
                     ov_const = make_constant(ovtype, ovshape.get_shape(), values)
-                except:
+                except Exception:
                     # old variant that makes a slow data copying
                     warnings.warn(f"[ WARNING ] Constant wasn't able to convert from data_ptr.")
                     values = ivalue.flatten().tolist()
@@ -323,7 +323,8 @@ class TorchScriptPythonDecoder (Decoder):
         return None
 
     def as_constant_list(self, pt_value):
-        # For now it is treat a list as a 1D tensor; it is required by converters to avoid need to massively rewrite them in that part where constant attributes are queried
+        # For now it is treat a list as a 1D tensor; it is required by converters to avoid need to massively
+        # rewrite them in that part where constant attributes are queried
         pt_element_type = str(pt_value.type().getElementType())
         ivalue = pt_value.toIValue()
         is_known_type = pt_element_type in pt_to_ov_type_map
