@@ -103,7 +103,7 @@ OutputVector translate_new_zeros(NodeContext& context) {
     auto input = context.get_input(0);
     auto sizes = context.get_input(1);
     auto value = context.mark_node(opset8::Constant::create(element::f32, Shape{}, {0}));
-    if (context.get_input_size() == 6 && !context.input_is_none(2)){
+    if (context.get_input_size() == 6 && !context.input_is_none(2)) {
         return {base_translate_full_with_convert(context, sizes, value, 2)};
     }
     return {base_translate_full_with_convertlike(context, sizes, value, input)};
