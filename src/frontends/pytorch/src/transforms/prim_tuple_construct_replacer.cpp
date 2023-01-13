@@ -6,7 +6,7 @@
 
 #include <openvino/frontend/pytorch/decoder.hpp>
 #include <openvino/op/util/framework_node.hpp>
-#include <openvino/opsets/opset8.hpp>
+#include <openvino/opsets/opset10.hpp>
 
 #include "utils.hpp"
 
@@ -31,14 +31,17 @@ bool DecomposeTupleResults::run_on_model(const std::shared_ptr<Model>& model) {
         for (auto input : inputs) {
             auto out = input.get_source_output();
             auto list_construct = cast_fw_node(out.get_node_shared_ptr(), "prim::ListConstruct");
-            if (list_construct != nullptr){
+            if (list_construct != nullptr) {
+                std::cout << "[WARNING]: Output format will be different from pytorch model, nested "
+                             "prim::ListConstruct output will be flatenized"
+                          << std::endl;
                 auto list_inputs = list_construct->input_values();
-                for (auto list_input: list_inputs){
-                    model->add_results({std::make_shared<opset8::Result>(list_input)});
+                for (auto list_input : list_inputs) {
+                    model->add_results({std::make_shared<opset10::Result>(list_input)});
                 }
                 continue;
             }
-            model->add_results({std::make_shared<opset8::Result>(out)});
+            model->add_results({std::make_shared<opset10::Result>(out)});
         }
 
         model->remove_result(result);
