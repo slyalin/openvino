@@ -35,6 +35,7 @@ OP_CONVERTER(translate_expand);
 OP_CONVERTER(translate_expand_as);
 OP_CONVERTER(translate_embedding);
 OP_CONVERTER(translate_flatten);
+OP_CONVERTER(translate_fill_);
 OP_CONVERTER(translate_floordiv);
 OP_CONVERTER(translate_floor_divide);
 OP_CONVERTER(translate_full);
@@ -158,6 +159,7 @@ const std::map<std::string, CreatorFunction> get_supported_ops() {
         {"aten::expand", op::translate_expand},
         {"aten::expand_as", op::translate_expand_as},
         {"aten::flatten", op::translate_flatten},
+        {"aten::fill_", op::inplace_op<op::translate_fill_>},
         {"aten::floor", op::translate_1to1_match_1_inputs<opset10::Floor>},
         {"aten::floor_", op::inplace_op<op::translate_1to1_match_1_inputs<opset10::Floor>>},
         {"aten::floordiv", op::translate_floordiv},
