@@ -18,6 +18,12 @@ public:
     MaxPrimListConstructReplacer();
 };
 
+class MinPrimListConstructReplacer : public ov::pass::MatcherPass {
+public:
+    OPENVINO_RTTI("ov::frontend::pytorch::pass::MinPrimListConstructReplacer");
+    MinPrimListConstructReplacer();
+};
+
 }  // namespace pass
 }  // namespace pytorch
 }  // namespace frontend
