@@ -6,9 +6,9 @@ from pytorch_layer_test_class import PytorchLayerTest
 
 
 class TestLog(PytorchLayerTest):
-    def _prepare_input(self):
+    def _prepare_input(self, dtype):
         import numpy as np
-        return (np.random.randn(1, 10).astype(np.float32),)
+        return (np.random.uniform(2, 16, (1, 10)).astype(dtype),)
 
     def create_model(self, op):
         import torch
@@ -35,6 +35,13 @@ class TestLog(PytorchLayerTest):
         return aten_log(op_fn), ref_net, f"aten::{op}"
 
     @pytest.mark.nightly
-    @pytest.mark.parametrize("op", ["log", "log_", "log2", "log2_"])
-    def test_log(self, op, ie_device, precision, ir_version):
-        self._test(*self.create_model(op), ie_device, precision, ir_version)
+    @pytest.mark.parametrize(("op", "input_dtype"),
+                             [["log", "float32"], 
+                             ["log", "int32"], 
+                             ["log_", "float32"], 
+                             ["log2", "float32"], 
+                             ["log2", "int32"], 
+                             ["log2_", "float32"]])
+    def test_log(self, op, input_dtype, ie_device, precision, ir_version):
+        self._test(*self.create_model(op), ie_device, precision,
+                   ir_version, kwargs_to_prepare_input={"dtype": input_dtype})

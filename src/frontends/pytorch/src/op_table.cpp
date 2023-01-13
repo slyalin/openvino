@@ -50,6 +50,7 @@ OP_CONVERTER(translate_layer_norm);
 OP_CONVERTER(translate_len);
 OP_CONVERTER(translate_linear);
 OP_CONVERTER(translate_list_construct);
+OP_CONVERTER(translate_log);
 OP_CONVERTER(translate_log2);
 OP_CONVERTER(translate_loop);
 OP_CONVERTER(translate_max_poolnd);
@@ -184,8 +185,8 @@ const std::map<std::string, CreatorFunction> get_supported_ops() {
         {"aten::len", op::translate_len},
         {"aten::linear", op::translate_linear},
         {"aten::le", op::translate_1to1_match_2_inputs<opset10::LessEqual>},
-        {"aten::log", op::translate_1to1_match_1_inputs<opset10::Log>},
-        {"aten::log_", op::inplace_op<op::translate_1to1_match_1_inputs<opset10::Log>>},
+        {"aten::log", op::translate_log},
+        {"aten::log_", op::inplace_op<op::translate_log>},
         {"aten::log2", op::translate_log2},
         {"aten::log2_", op::inplace_op<op::translate_log2>},
         {"aten::lt", op::translate_1to1_match_2_inputs<opset10::Less>},
