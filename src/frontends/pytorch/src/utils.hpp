@@ -1,10 +1,10 @@
-// Copyright (C) 2018-2022 Intel Corporation
+// Copyright (C) 2018-2023 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
 
 #pragma once
 
-#include <openvino/opsets/opset8.hpp>
+#include <openvino/opsets/opset10.hpp>
 
 #include "openvino/frontend/pytorch/node_context.hpp"
 
@@ -97,7 +97,7 @@ OutputVector translate_1to1_match_2_inputs(NodeContext& context) {
 }
 
 inline OutputVector return_false_scalar(NodeContext& context) {
-    return {context.mark_node(opset8::Constant::create(element::boolean, Shape{}, {false}))};
+    return {context.mark_node(opset10::Constant::create(element::boolean, Shape{}, {false}))};
 }
 
 inline OutputVector skip_node(NodeContext& context) {

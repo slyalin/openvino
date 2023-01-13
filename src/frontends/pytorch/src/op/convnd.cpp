@@ -1,9 +1,9 @@
-// Copyright (C) 2018-2022 Intel Corporation
+// Copyright (C) 2018-2023 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
 
 #include "openvino/frontend/pytorch/node_context.hpp"
-#include "openvino/opsets/opset8.hpp"
+#include "openvino/opsets/opset10.hpp"
 #include "utils.hpp"
 
 namespace ov {
@@ -32,15 +32,15 @@ OutputVector translate_convnd(NodeContext& context) {
 
     std::shared_ptr<ov::Node> conv;
     if (groups == 1) {
-        conv = std::make_shared<opset8::Convolution>(context.get_input(0),
-                                                     context.get_input(1),
-                                                     strides,
-                                                     pads,
-                                                     pads,
-                                                     dilations,
-                                                     pad_type);
+        conv = std::make_shared<opset10::Convolution>(context.get_input(0),
+                                                      context.get_input(1),
+                                                      strides,
+                                                      pads,
+                                                      pads,
+                                                      dilations,
+                                                      pad_type);
     } else {
-        conv = std::make_shared<opset8::GroupConvolution>(
+        conv = std::make_shared<opset10::GroupConvolution>(
             context.get_input(0),
             reshape_kernel_for_group(context, context.get_input(0), context.get_input(1), groups),
             strides,
@@ -55,7 +55,7 @@ OutputVector translate_convnd(NodeContext& context) {
         if (bias_rank == 1) {
             bias = reshape_conv_bias(context, bias, conv);
         }
-        conv = context.mark_node(std::make_shared<opset8::Add>(conv, bias));
+        conv = context.mark_node(std::make_shared<opset10::Add>(conv, bias));
     }
 
     return {conv};

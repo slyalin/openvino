@@ -1,4 +1,4 @@
-// Copyright (C) 2018-2022 Intel Corporation
+// Copyright (C) 2018-2023 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
 
@@ -41,7 +41,7 @@ bool DecomposeTupleResults::run_on_model(const std::shared_ptr<Model>& model) {
                 }
                 continue;
             }
-            model->add_results({std::make_shared<opset10::Result>(out)});
+            model->add_results({std::make_shared<opset10::Result>(out)});d
         }
 
         model->remove_result(result);
