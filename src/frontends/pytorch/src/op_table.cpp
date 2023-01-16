@@ -31,10 +31,12 @@ OP_CONVERTER(translate_convolution_mode);
 OP_CONVERTER(translate_dim);
 OP_CONVERTER(translate_div);
 OP_CONVERTER(translate_elu);
+OP_CONVERTER(translate_embedding);
 OP_CONVERTER(translate_expand);
 OP_CONVERTER(translate_expand_as);
-OP_CONVERTER(translate_embedding);
+OP_CONVERTER(translate_eye);
 OP_CONVERTER(translate_flatten);
+OP_CONVERTER(translate_float);
 OP_CONVERTER(translate_floordiv);
 OP_CONVERTER(translate_floor_divide);
 OP_CONVERTER(translate_full);
@@ -158,7 +160,10 @@ const std::map<std::string, CreatorFunction> get_supported_ops() {
         {"aten::exp", op::translate_1to1_match_1_inputs<opset10::Exp>},
         {"aten::expand", op::translate_expand},
         {"aten::expand_as", op::translate_expand_as},
+        {"aten::eye", op::translate_eye},
         {"aten::flatten", op::translate_flatten},
+        {"aten::Float", op::translate_float},
+        {"aten::FloatImplicit", op::translate_float},
         {"aten::floor", op::translate_1to1_match_1_inputs<opset10::Floor>},
         {"aten::floor_", op::inplace_op<op::translate_1to1_match_1_inputs<opset10::Floor>>},
         {"aten::floordiv", op::translate_floordiv},
@@ -175,6 +180,7 @@ const std::map<std::string, CreatorFunction> get_supported_ops() {
         {"aten::hardtanh", op::translate_hardtanh},
         {"aten::hardtanh_", op::inplace_op<op::translate_hardtanh>},
         {"aten::Int", op::translate_int},
+        {"aten::IntImplicit", op::translate_int},
         {"aten::im2col", op::translate_im2col},
         {"aten::is_grad_enabled", op::return_false_scalar},
         {"aten::layer_norm", op::translate_layer_norm},
@@ -221,6 +227,7 @@ const std::map<std::string, CreatorFunction> get_supported_ops() {
         {"aten::rsub", op::translate_rsub},
         {"aten::roll", op::translate_roll},
         {"aten::rsqrt", op::translate_rsqrt},
+        {"aten::ScalarImplicit", op::skip_node},
         {"aten::select", op::translate_select},
         {"aten::selu", op::translate_selu},
         {"aten::selu_", op::inplace_op<op::translate_selu>},
