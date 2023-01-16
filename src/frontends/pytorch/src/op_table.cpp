@@ -86,6 +86,8 @@ OP_CONVERTER(translate_sub);
 OP_CONVERTER(translate_sum);
 OP_CONVERTER(translate_to);
 OP_CONVERTER(translate_transpose);
+OP_CONVERTER(translate_triu);
+OP_CONVERTER(translate_tril);
 OP_CONVERTER(translate_tuple_construct);
 OP_CONVERTER(translate_upsample_bicubic2d);
 OP_CONVERTER(translate_upsample_bilinear2d);
@@ -244,10 +246,12 @@ const std::map<std::string, CreatorFunction> get_supported_ops() {
         {"aten::tanh", op::translate_1to1_match_1_inputs<opset10::Tanh>},
         {"aten::tanh_", op::inplace_op<op::translate_1to1_match_1_inputs<opset10::Tanh>>},
         {"aten::tensor", op::translate_as_tensor},
-        {"aten::type_as",
-         op::translate_1to1_match_2_inputs<opset10::ConvertLike>},  // TODO: overflow semantics is different
         {"aten::to", op::translate_to},
         {"aten::transpose", op::translate_transpose},
+        {"aten::tril", op::translate_tril},
+        {"aten::triu", op::translate_triu},
+        {"aten::type_as",
+         op::translate_1to1_match_2_inputs<opset10::ConvertLike>},  // TODO: overflow semantics is different
         {"aten::unsqueeze", op::translate_1to1_match_2_inputs<opset10::Unsqueeze>},
         {"aten::unsqueeze_", op::inplace_op<op::translate_1to1_match_2_inputs<opset10::Unsqueeze>>},
         {"aten::upsample_bicubic2d", op::translate_upsample_bicubic2d},
