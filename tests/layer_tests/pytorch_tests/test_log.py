@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2022 Intel Corporation
+# Copyright (C) 2018-2023 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 
 import pytest
@@ -35,6 +35,7 @@ class TestLog(PytorchLayerTest):
         return aten_log(op_fn), ref_net, f"aten::{op}"
 
     @pytest.mark.nightly
+    @pytest.mark.precomit
     @pytest.mark.parametrize(("op", "input_dtype"),
                              [["log", "float32"], 
                              ["log", "int32"], 
