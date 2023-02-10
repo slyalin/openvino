@@ -18,6 +18,7 @@
 #include "transforms/prim_list_construct_pad.hpp"
 #include "transforms/prim_list_unpack_replacer.hpp"
 #include "transforms/prim_tuple_construct_replacer.hpp"
+#include "transforms/generic_list.hpp"
 
 namespace ov {
 namespace frontend {
@@ -44,7 +45,6 @@ std::set<std::string> get_unconverted_types_from_model(const std::shared_ptr<Mod
 
 std::shared_ptr<Model> FrontEnd::convert(const InputModel::Ptr& model) const {
     auto converted_model = convert_partially(model);
-    normalize(converted_model);
     std::set<std::string> unconverted_ops_types = get_unconverted_types_from_model(converted_model);
     std::stringstream ops_str;
     for (auto&& op_type : unconverted_ops_types) {
@@ -63,6 +63,7 @@ std::shared_ptr<Model> FrontEnd::convert_partially(const ov::frontend::InputMode
     try {
         auto pytorch_model = std::dynamic_pointer_cast<pytorch::InputModel>(model);
         auto model = convert_pytorch_model(pytorch_model->m_model);
+        normalize(model);
 
         return model;
     } catch (const std::runtime_error& e) {
@@ -90,6 +91,7 @@ void FrontEnd::normalize(const std::shared_ptr<ov::Model>& model) const {
     manager.register_pass<ov::frontend::pytorch::pass::MaxPrimListConstructReplacer>();
     manager.register_pass<ov::frontend::pytorch::pass::PrimListConstructPadReplacer>();
     manager.register_pass<ov::frontend::pytorch::pass::DecomposeTupleResults>();
+    manager.register_pass<ov::frontend::pytorch::pass::GenericListConstruct>();
     manager.register_pass<ov::pass::ConstantFolding>();
 
     manager.run_passes(model);

@@ -20,6 +20,7 @@
 #include <openvino/core/type/non_tensor_type.hpp>
 #include <openvino/opsets/opset9.hpp>
 #include <openvino/op/util/framework_node.hpp>
+#include <openvino/pass/list.hpp>
 
 using std::make_shared;
 using std::shared_ptr;
@@ -356,11 +357,7 @@ bool DecomposeStrParameters::run_on_model(const std::shared_ptr<Model>& model) {
 
 
 OutputVector get_inputs (std::shared_ptr<Node> node) {
-    OutputVector result;
-    for(size_t i = 0; i < node->get_input_size(); ++i) {
-        result.push_back(node->get_input_source_output(i));
-    }
-    return result;
+    return node->input_values();
 }
 
 using ov::pass::pattern::wrap_type;
@@ -656,6 +653,14 @@ ThroughTensorListSetItem::ThroughTensorListSetItem() {
 
         if(auto node = as_tf_op_type(m.get_match_root(), "TensorListSetItem")) {
             std::cerr << "Found TensorListSetItem: " << node << "\n";
+
+            return ov::pass::decompose_list_set_item(
+                node,
+                node->get_input_node_shared_ptr(0),
+                node->get_input_source_output(1),
+                node->get_input_source_output(2)
+            );
+
             auto sp = std::dynamic_pointer_cast<StructPack>(node->get_input_node_shared_ptr(0));
             if(!sp) {
                 std::cerr << "[ ERROR ] Coudn't decode StructPack at the first input port of TensorListSetItem\n";
@@ -728,6 +733,13 @@ ThroughTensorListSetItem::ThroughTensorListSetItem() {
             return true;
         } else if(auto node = as_tf_op_type(m.get_match_root(), "TensorListGetItem")) {
             std::cerr << "Found TensorListGetItem: " << node << "\n";
+
+            return ov::pass::decompose_list_get_item(
+                node,
+                node->get_input_node_shared_ptr(0),
+                node->get_input_source_output(1)
+            );
+
             auto sp = std::dynamic_pointer_cast<StructPack>(node->get_input_node_shared_ptr(0));
             if(!sp) {
                 std::cerr << "[ ERROR ] Coudn't decode StructPack at the first input port of TensorListGetItem\n";

@@ -14,9 +14,17 @@
 #include "openvino/core/type/non_tensor_type.hpp"
 
 namespace ov {
+
+template <typename T>
+inline std::shared_ptr<ov::opset10::Constant> const_value (const T& value, size_t rank = 0, element::Type et = element::i32) {
+    return std::make_shared<ov::opset10::Constant>(et, Shape(rank, 1), value);
+}
+
+
 namespace frontend {
 namespace tensorflow {
 
+using ov::const_value;
 
 class StructuralTypeWA {
 public:
@@ -30,11 +38,6 @@ public:
 using ov::opset10::Constant;
 using std::make_shared;
 using std::shared_ptr;
-
-template <typename T>
-shared_ptr<Constant> const_value (const T& value, size_t rank = 0, element::Type et = element::i32) {
-    return make_shared<Constant>(et, Shape(rank, 1), value);
-}
 
 namespace StructuralTypeProxy {
 

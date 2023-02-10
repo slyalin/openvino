@@ -439,7 +439,13 @@ std::shared_ptr<ov::op::util::FrameworkNode> cast_fw_node(std::shared_ptr<Node> 
         return nullptr;
     }
     const auto& attrs = fw_node->get_attrs();
+    // std::cerr << "Check type\n";
     if (attrs.find("PtTypeName") == attrs.end() || attrs.at("PtTypeName") != type) {
+        // if(attrs.find("PtTypeName") == attrs.end()) {
+        //     std::cerr << "Not found PtTypeName\n";
+        // } else {
+        //     std::cerr << "PtTypeName == " << attrs.at("PtTypeName") << " != " << type << "\n";
+        // }
         return nullptr;
     }
     return fw_node;
