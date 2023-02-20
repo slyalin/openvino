@@ -13,22 +13,41 @@ namespace ov {
 namespace pass {
 
 
-bool decompose_list_set_item (
-    std::shared_ptr<Node> set_item,
+OPENVINO_API Output<Node> decompose_list_set_item (
     std::shared_ptr<Node> list,
     Output<Node> index_scalar,
     Output<Node> item
 );
 
-bool decompose_list_get_item (
-    std::shared_ptr<Node> get_item,
+
+OPENVINO_API Output<Node> decompose_list_append (
+    std::shared_ptr<Node> list,
+    Output<Node> item
+);
+
+
+OPENVINO_API Output<Node> decompose_list_get_item (
     std::shared_ptr<Node> list,
     Output<Node> index
 );
 
-bool decompose_list_construct (
-    std::shared_ptr<Node> list_construct,
-    OutputVector inputs
+OPENVINO_API Output<Node> decompose_list_reserve (
+    Output<Node> element_shape,
+    Output<Node> num_elements_scalar,
+    element::Type element_type = element::i32,
+    element::Type shape_type = element::i32
+);
+
+
+OPENVINO_API Output<Node> decompose_list_construct (
+    OutputVector inputs,
+    element::Type element_type = element::i32,
+    element::Type shape_type = element::i32
+);
+
+OPENVINO_API Output<Node> decompose_tensor_to_list (
+    OutputVector tensor,
+    element::Type shape_type = element::i32
 );
 
 

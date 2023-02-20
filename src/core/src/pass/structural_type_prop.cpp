@@ -654,12 +654,16 @@ ThroughTensorListSetItem::ThroughTensorListSetItem() {
         if(auto node = as_tf_op_type(m.get_match_root(), "TensorListSetItem")) {
             std::cerr << "Found TensorListSetItem: " << node << "\n";
 
-            return ov::pass::decompose_list_set_item(
-                node,
+            auto new_list = ov::pass::decompose_list_set_item(
                 node->get_input_node_shared_ptr(0),
                 node->get_input_source_output(1),
                 node->get_input_source_output(2)
             );
+
+            replace_node(node, new_list.get_node_shared_ptr());
+            return true;
+
+            #if 0
 
             auto sp = std::dynamic_pointer_cast<StructPack>(node->get_input_node_shared_ptr(0));
             if(!sp) {
@@ -731,14 +735,20 @@ ThroughTensorListSetItem::ThroughTensorListSetItem() {
             replace_node(node, new_sp);
 
             return true;
+
+            #endif
         } else if(auto node = as_tf_op_type(m.get_match_root(), "TensorListGetItem")) {
             std::cerr << "Found TensorListGetItem: " << node << "\n";
 
-            return ov::pass::decompose_list_get_item(
-                node,
+            auto item = ov::pass::decompose_list_get_item(
                 node->get_input_node_shared_ptr(0),
                 node->get_input_source_output(1)
             );
+
+            replace_node(node, item.get_node_shared_ptr());
+            return true;
+
+            #if 0
 
             auto sp = std::dynamic_pointer_cast<StructPack>(node->get_input_node_shared_ptr(0));
             if(!sp) {
@@ -778,6 +788,8 @@ ThroughTensorListSetItem::ThroughTensorListSetItem() {
             auto item = make_shared<Reshape>(flat, shape, false);
             replace_node(node, item);
             return true;
+
+            #endif
         }
         return false;
     };

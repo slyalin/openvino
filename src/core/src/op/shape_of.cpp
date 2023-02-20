@@ -31,7 +31,7 @@ void op::v3::ShapeOf::validate_and_infer_types() {
     OV_OP_SCOPE(v3_ShapeOf_validate_and_infer_types);
     NODE_VALIDATION_CHECK(this,
                           m_output_type == element::i64 || m_output_type == element::i32,
-                          "Output type must be i32 or i64");
+                          std::string("Output type must be i32 or i64, got ") + m_output_type.get_type_name());
     set_input_is_relevant_to_value(0, false);
     const auto input_partial_shape = get_input_partial_shape(0);
     set_output_type(0, m_output_type, ov::PartialShape{input_partial_shape.rank()});

@@ -26,6 +26,24 @@ public:
     bool replacer (std::shared_ptr<PtFrameworkNode> fw_node) const override;
 };
 
+class GenericListAppend : public FWNodeMatcherPass {
+public:
+    GenericListAppend() : FWNodeMatcherPass("aten::append") {}
+    bool replacer (std::shared_ptr<PtFrameworkNode> fw_node) const override;
+};
+
+class GenericListGetItem : public FWNodeMatcherPass {
+public:
+    GenericListGetItem() : FWNodeMatcherPass("aten::__getitem__") {}
+    bool replacer (std::shared_ptr<PtFrameworkNode> fw_node) const override;
+};
+
+class GenericListSetItem : public FWNodeMatcherPass {
+public:
+    GenericListSetItem() : FWNodeMatcherPass("aten::_set_item") {}
+    bool replacer (std::shared_ptr<PtFrameworkNode> fw_node) const override;
+};
+
 }  // namespace pass
 }  // namespace pytorch
 }  // namespace frontend

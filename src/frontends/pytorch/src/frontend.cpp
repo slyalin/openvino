@@ -91,7 +91,18 @@ void FrontEnd::normalize(const std::shared_ptr<ov::Model>& model) const {
     manager.register_pass<ov::frontend::pytorch::pass::MaxPrimListConstructReplacer>();
     manager.register_pass<ov::frontend::pytorch::pass::PrimListConstructPadReplacer>();
     manager.register_pass<ov::frontend::pytorch::pass::DecomposeTupleResults>();
-    manager.register_pass<ov::frontend::pytorch::pass::GenericListConstruct>();
+
+    #if 1
+    {
+        auto generic_list_passes = manager.register_pass<ov::pass::GraphRewrite>();
+
+        generic_list_passes->add_matcher<ov::frontend::pytorch::pass::GenericListConstruct>();
+        generic_list_passes->add_matcher<ov::frontend::pytorch::pass::GenericListAppend>();
+        generic_list_passes->add_matcher<ov::frontend::pytorch::pass::GenericListGetItem>();
+        generic_list_passes->add_matcher<ov::frontend::pytorch::pass::GenericListSetItem>();
+    }
+    #endif
+
     manager.register_pass<ov::pass::ConstantFolding>();
 
     manager.run_passes(model);

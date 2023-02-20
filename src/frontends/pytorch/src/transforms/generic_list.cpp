@@ -11,6 +11,7 @@
 #include "openvino/opsets/opset10.hpp"
 #include "openvino/pass/pattern/matcher.hpp"
 #include "openvino/pass/pattern/op/wrap_type.hpp"
+#include "openvino/pass/list.hpp"
 #include "pt_framework_node.hpp"
 #include "utils.hpp"
 #include "generic_list.hpp"
@@ -44,7 +45,32 @@ bool GenericListConstruct::replacer (std::shared_ptr<PtFrameworkNode> fw_node) c
     // Put all the inputs to the list,
     // Assume each input has a type of a tensor and they all have the same rank
     std::cerr << "[ GENERIC LIST ] Detected prim::ListConstruct " << fw_node << "\n";
-    return decompose_list_construct(fw_node, fw_node->input_values());
+    auto list = ov::pass::decompose_list_construct(fw_node->input_values());
+    replace_node(fw_node, list.get_node_shared_ptr());
+    return true;
+}
+
+bool GenericListAppend::replacer (std::shared_ptr<PtFrameworkNode> fw_node) const {
+
+    std::cerr << "[ GENERIC LIST ] Detected prim::append " << fw_node << "\n";
+    auto new_list = ov::pass::decompose_list_append(fw_node->get_input_node_shared_ptr(0), fw_node->input_value(1));
+    replace_node(fw_node, {new_list, new_list});
+    return true;
+}
+
+bool GenericListGetItem::replacer (std::shared_ptr<PtFrameworkNode> fw_node) const {
+
+    std::cerr << "[ GENERIC LIST ] Detected aten::__getitem__ " << fw_node << "\n";
+    auto item = ov::pass::decompose_list_get_item(fw_node->get_input_node_shared_ptr(0), fw_node->input_value(1));
+    replace_node(fw_node, item.get_node_shared_ptr());
+    return true;
+}
+
+bool GenericListSetItem::replacer (std::shared_ptr<PtFrameworkNode> fw_node) const {
+    std::cerr << "[ GENERIC LIST ] Detected aten::_set_item " << fw_node << "\n";
+    auto new_list = ov::pass::decompose_list_set_item(fw_node->get_input_node_shared_ptr(0), fw_node->input_value(1), fw_node->input_value(2));
+    replace_node(fw_node, {new_list, new_list});
+    return true;
 }
 
 }  // namespace pass

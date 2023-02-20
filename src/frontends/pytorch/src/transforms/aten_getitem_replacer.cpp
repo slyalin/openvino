@@ -95,6 +95,7 @@ AtenGetItemReplacer::AtenGetItemReplacer() {
             }
             return true;
         }
+        #if 0   // It cannot be aplied with generic get_item support, because we are missing all list updates
         if (auto list_construct = cast_fw_node(input_node, "prim::ListConstruct")) {
             auto input_concat = concat_list_construct(list_construct);
             auto getitem_idx = getitem->input_value(1).get_node_shared_ptr();
@@ -104,6 +105,7 @@ AtenGetItemReplacer::AtenGetItemReplacer() {
             replace_node(getitem, gather);
             return true;
         }
+        #endif
 
         return false;
     };

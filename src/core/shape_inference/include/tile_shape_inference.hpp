@@ -51,7 +51,7 @@ std::vector<T> shape_infer(const Tile* op,
                        rep_it,
                        std::back_inserter(output_shape),
                        std::multiplies<TDim>());
-    } else if (arg_rank.is_static() && repeats_shape[0].is_static()) {
+    } else if (arg_rank.is_static() && repeats_shape.rank().is_static()) {
         // unknown repeats but shape is 1-D static, any dim can be repeated (add missing dimension)
         output_shape.resize(std::max<size_t>(arg_rank.get_length(), repeats_shape[0].get_length()));
     } else {
