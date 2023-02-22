@@ -8,6 +8,8 @@
 
 bool ov::pass::Validate::run_on_model(const std::shared_ptr<ov::Model>& m) {
     RUN_ON_MODEL_SCOPE(Validate);
+    std::cerr << "Start Validate\n";
     m->validate_nodes_and_infer_types();
+    std::cerr << "End Validate\n";
     return false;
 }

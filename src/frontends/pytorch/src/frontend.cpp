@@ -105,7 +105,11 @@ void FrontEnd::normalize(const std::shared_ptr<ov::Model>& model) const {
 
     manager.register_pass<ov::pass::ConstantFolding>();
 
+    std::cerr << "[ PT FE ] Start running passes\n";
+
     manager.run_passes(model);
+
+    std::cerr << "[ PT FE ] All passes completed\n";
 
     apply_pytorch_conversion_transforms(model);
 

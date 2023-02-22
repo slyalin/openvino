@@ -20,6 +20,18 @@ namespace pass {
 
 using ov::frontend::tensorflow::StructPack;
 
+struct Diagnostics {
+    Diagnostics(const std::string& _title) : title(_title) {
+        std::cerr << "[ LIST ] Start " << title << "\n";
+    }
+    ~Diagnostics() {
+        if(std::uncaught_exception()) {
+            std::cerr << "Exception was thrown\n";
+        }
+        std::cerr << "[ LIST ] End " << title << "\n";
+    }
+    std::string title;
+};
 
 Output<Node> decompose_list_set_item (
     shared_ptr<Node> list,
@@ -29,7 +41,7 @@ Output<Node> decompose_list_set_item (
     using namespace opset10;
     using ov::frontend::tensorflow::StructPack;
 
-    std::cerr << "[ LIST ] decompose_list_set_item\n";
+    Diagnostics _diag("decompose_list_set_item");
 
     auto sp = std::dynamic_pointer_cast<StructPack>(list);
     if(!sp) {
@@ -130,7 +142,7 @@ Output<Node> decompose_list_append (
     using namespace opset10;
     using ov::frontend::tensorflow::StructPack;
 
-    std::cerr << "[ LIST ] decompose_list_append\n";
+    Diagnostics _diag("decompose_list_append");
 
     auto sp = std::dynamic_pointer_cast<StructPack>(list);
     if(!sp) {
@@ -155,13 +167,19 @@ Output<Node> decompose_list_append (
     auto new_ends = make_shared<Concat>(OutputVector{ends, make_shared<ShapeOf>(new_elements, ends.get_element_type())}, 0);
 
     auto shape_type = shapes.get_element_type();
+    auto num_elements = make_shared<ShapeOf>(begins, shape_type);  // the same as for ends
 
     auto shape = make_shared<ShapeOf>(item, shape_type);
     auto rank = make_shared<ShapeOf>(shape, shape_type);
     // Reshape initial shapes in case if it was created without knowing the shape that means it is empty with wrong shape
-    auto preshape = make_shared<Concat>(OutputVector{const_value(-1, 1, shape_type), rank}, 0);
+    auto preshape = make_shared<Concat>(OutputVector{num_elements, rank}, 0);   // do not use -1 because it doesn't work always correctly for empty input tensors
+    std::cerr << "HERE\n";
     shapes = make_shared<Reshape>(shapes, preshape, false);
     auto new_shapes = make_shared<Concat>(OutputVector{shapes, make_shared<Unsqueeze>(shape, zero)}, 0);
+
+    std::cerr << "[ LIST ] Near the end of decompose_list_append\n";
+    std::cerr << "Shapes after decompose_list_append: " << new_shapes << "\n";
+
 
     return sp->clone_with_new_inputs({new_shapes, new_begins, new_ends, new_elements});
 }
@@ -173,7 +191,7 @@ Output<Node> decompose_list_get_item (
     using namespace opset10;
     using ov::frontend::tensorflow::StructPack;
 
-    std::cerr << "[ LIST ] decompose_list_get_item\n";
+    Diagnostics _diag("decompose_list_get_item");
 
     auto sp = std::dynamic_pointer_cast<StructPack>(list);
     if(!sp) {
@@ -219,6 +237,7 @@ Output<Node> decompose_list_reserve (
     element::Type element_type,
     element::Type shape_type
 ) {
+    Diagnostics _diag("decompose_list_reserve");
     auto num_elements = std::make_shared<opset10::Reshape>(num_elements_scalar, const_value(1, 1), false);
 
     // known rank of elements implies element_shape has static shape
@@ -244,6 +263,8 @@ Output<Node> decompose_list_reserve (
     // FIXME: there will be an extra StridedSlice to cut off this padding.
     auto elements = opset10::Constant::create(element_type, {1}, {0});
 
+    std::cerr << "Shapes after decompose_list_reserve: " << shapes << "\n";
+
     return make_shared<StructPack>(
         OutputVector{shapes, indices, indices, elements},
         element::StructuralType::TensorListWithRank(element_type, element_rank),
@@ -256,6 +277,7 @@ Output<Node> decompose_list_construct (
     element::Type element_type,
     element::Type shape_type
 ) {
+    Diagnostics _diag("decompose_list_construct");
     Output<Node> sp = decompose_list_reserve(
         make_shared<opset10::Constant>(shape_type, Shape{0}),
         const_value(0, 0),
@@ -354,7 +376,7 @@ Output<Node> decompose_tensor_to_list (
     using namespace opset10;
     using ov::frontend::tensorflow::StructPack;
 
-    std::cerr << "[ LIST ] decompose_tensor_to_list\n";
+    Diagnostics _diag("decompose_tensor_to_list");
 
     // Take the first tensor (if any) element type as a final list tensor element type
     element::Type element_type = tensor.get_element_type();

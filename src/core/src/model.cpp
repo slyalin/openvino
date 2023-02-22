@@ -202,6 +202,7 @@ void ov::Model::prerequirements(bool detect_variables, bool detect_parameters) {
 
 void ov::Model::validate_nodes_and_infer_types() const {
     OV_ITT_SCOPED_TASK(ov::itt::domains::core, "Model::validate_nodes_and_infer_types");
+    //std::cerr << "Start validate_nodes_and_infer_types\n";
 
     struct Counter {
         int cnt_assign = 0;
@@ -213,6 +214,7 @@ void ov::Model::validate_nodes_and_infer_types() const {
     std::unordered_set<const ov::descriptor::Tensor*> tensors;
 
     for (auto& node : get_ordered_ops()) {
+        //std::cerr << "validate_nodes_and_infer_types: " << node << "\n";
         node->revalidate_and_infer_types();
         for (const auto& output : node->outputs()) {
             const auto& tensor = output.get_tensor();
