@@ -757,6 +757,8 @@ void prepare_primitive_fusing::fuse_simple_primitives(program &p) {
 
             should_fuse |= input.is_type<eltwise>() && eltwise_supports_fusings(input.as<eltwise>());
 
+            should_fuse |= input.is_type<strided_slice>();
+
             bool legacy_fusion = activation_node.get_dependencies().size() == 1 &&
                                  !input.can_be_optimized() &&
                                  !activation_node.is_constant() &&
@@ -911,7 +913,6 @@ void prepare_primitive_fusing::fuse_simple_primitives(program &p) {
                 return;
 
             std::vector<std::pair<program_node*, int32_t>> parents = node.get_dependencies();
-            std::list<cldnn::program_node*> users = node.get_users();
 
             std::vector<bool> can_fuse_parents = { false, false };
 
