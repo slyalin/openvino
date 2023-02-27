@@ -57,6 +57,10 @@ void align_eltwise_input_types(const NodeContext& context,
                                Output<Node>& rhs,
                                bool align_scalars = false);
 
+// If argument is a list of scalars (if can be determined), returns stacked 1D tensor with all scalars from the list
+// FIXME: Don't know why OPENVINO_API is required, but it is not compiled without it
+Output<Node> try_list_of_scalars_concat(Output<Node> list_like);
+
 namespace op {
 template <OutputVector (*T)(NodeContext&), size_t idx = 0>
 OutputVector inplace_op(NodeContext& context) {

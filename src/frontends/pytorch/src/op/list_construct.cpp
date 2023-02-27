@@ -6,6 +6,7 @@
 #include "openvino/op/concat.hpp"
 #include "openvino/op/constant.hpp"
 #include "openvino/op/unsqueeze.hpp"
+#include "openvino/pass/list.hpp"
 #include "utils.hpp"
 
 namespace ov {
@@ -16,6 +17,10 @@ namespace op {
 using namespace ov::op;
 
 OutputVector translate_list_construct(NodeContext& context) {
+
+    // Completely override old implementation with new list handling
+    return {ov::pass::decompose_list_construct(context.inputs())};
+
     // Process the case when prim::ListConstruct has all inputs constant
     auto const_0 = context.mark_node(v0::Constant::create(element::i32, Shape{}, {0}));
     ov::OutputVector consts;

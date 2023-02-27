@@ -35,10 +35,15 @@ namespace pytorch {
 namespace {
 std::set<std::string> get_unconverted_types_from_model(const std::shared_ptr<Model>& model) {
     std::set<std::string> unconverted_ops_types;
+
+    // Ops that we know that are unsupported
+    std::set<std::string> exceptions{"aten::col2im"};
+
     for (const auto& node : model->get_ordered_ops()) {
         if (const auto& fw_node = ov::as_type_ptr<PtFrameworkNode>(node)) {
             auto op_type = fw_node->get_decoder()->get_op_type();
-            unconverted_ops_types.insert(op_type);
+            if(exceptions.find(op_type) == exceptions.end())
+                unconverted_ops_types.insert(op_type);
         }
         if (const auto& fw_node = ov::as_type_ptr<ov::op::util::MultiSubGraphOp>(node)) {
             for (size_t i = 0; i < fw_node->get_internal_subgraphs_size(); i++) {
@@ -104,7 +109,7 @@ void FrontEnd::normalize(const std::shared_ptr<ov::Model>& model) const {
     manager.register_pass<ov::frontend::pytorch::pass::DecomposeListTupleResults>();
     manager.register_pass<ov::frontend::pytorch::pass::DecomposeListTupleResults>();
 
-    #if 1
+    #if 0
     {
         auto generic_list_passes = manager.register_pass<ov::pass::GraphRewrite>();
 

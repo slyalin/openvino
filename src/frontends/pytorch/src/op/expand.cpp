@@ -34,7 +34,7 @@ OutputVector translate_expand(NodeContext& context) {
     // aten::expand(Tensor(a) self, SymInt[] size, *, bool implicit=False) -> Tensor(a)
     num_inputs_check(context, 2, 3);
     auto x = context.get_input(0);
-    auto sizes = context.get_input(1);
+    auto sizes = try_list_of_scalars_concat(context.get_input(1));
     // TODO: figure out what implicit means
     FRONT_END_OP_CONVERSION_CHECK(context.input_is_none(2) || context.const_input<bool>(2) == false,
                                   "Unexpected value of implicit for expand operation");

@@ -10,6 +10,9 @@
 #include "openvino/util/log.hpp"
 #include "pt_framework_node.hpp"
 #include "translate_session.hpp"
+#include "openvino/core/validation_util.hpp"
+#include "openvino/op/str_ops.hpp"
+
 
 namespace ov {
 namespace frontend {
@@ -397,6 +400,27 @@ void align_eltwise_input_types(const NodeContext& context, Output<Node>& lhs, Ou
     if (rhs_dst_type != rhs_type) {
         rhs = context.mark_node(std::make_shared<opset10::Convert>(rhs, rhs_dst_type));
     }
+}
+
+Output<Node> try_list_of_scalars_concat(Output<Node> list_like) {
+    if(auto sp = std::dynamic_pointer_cast<tensorflow::StructPack>(list_like.get_node_shared_ptr())) {
+        auto elements_input = sp->input_value(3);   // SP for lists has 4 inputs: shapes, begins, ends, elements, we are taking elements
+        std::cerr << "try_list_of_scalars_concat: detected StructPack: " << sp << '\n';
+        std::cerr << "try_list_of_scalars_concat: elements of that StructPack: " << sp << '\n';
+        std::cerr << "try_list_of_scalars_concat: rank of stored elements in the list: " << sp->input_value(0).get_partial_shape()[1] << "\n";
+        // Trying to fold constant
+        auto elements_const = get_constant_from_source(elements_input);
+        if(elements_const) {
+            std::cerr << "    elements is represented as constant " << elements_const << "\n";
+            return elements_const;
+        } else {
+            std::cerr << "    elements cannot be represented as constant, leave a tensor elements instead of SP\n";
+            return elements_input;
+        }
+    }
+
+    // Cannot do anything smart, pass through
+    return list_like;
 }
 
 }  // namespace pytorch

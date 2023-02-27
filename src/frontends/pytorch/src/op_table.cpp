@@ -5,6 +5,7 @@
 #include "op_table.hpp"
 
 #include "openvino/opsets/opset10.hpp"
+#include "openvino/pass/list.hpp"
 #include "utils.hpp"
 
 namespace ov {
@@ -24,6 +25,7 @@ OP_CONVERTER(translate_as_tensor);
 OP_CONVERTER(translate_avg_poolnd);
 OP_CONVERTER(translate_bool);
 OP_CONVERTER(translate_batch_norm);
+OP_CONVERTER(translate_cat);
 OP_CONVERTER(translate_clamp);
 OP_CONVERTER(translate_constant);
 OP_CONVERTER(translate_conv_transposend);
@@ -53,6 +55,7 @@ OP_CONVERTER(translate_group_norm);
 OP_CONVERTER(translate_hardtanh);
 OP_CONVERTER(translate_if);
 OP_CONVERTER(translate_im2col);
+OP_CONVERTER(translate_col2im);
 OP_CONVERTER(translate_index_put_);
 OP_CONVERTER(translate_instance_norm);
 OP_CONVERTER(translate_int);
@@ -155,13 +158,14 @@ const std::map<std::string, PytorchCreatorFunction> get_supported_ops() {
         {"aten::batch_norm", op::translate_batch_norm},
         {"aten::bmm", op::translate_1to1_match_2_inputs<opset10::MatMul>},
         {"aten::Bool", op::translate_bool},
-        // {"aten::cat", done as transformation},
+        {"aten::cat", op::translate_cat},
         {"aten::ceil", op::translate_1to1_match_1_inputs<opset10::Ceiling>},
         {"aten::ceil_", op::inplace_op<op::translate_1to1_match_1_inputs<opset10::Ceiling>>},
         {"aten::clamp", op::translate_clamp},
         {"aten::clamp_max", op::translate_1to1_match_2_inputs<opset10::Minimum>},
         {"aten::clamp_min", op::translate_1to1_match_2_inputs<opset10::Maximum>},
         {"aten::clone", op::skip_node},       // ignore clone operators that are inserted by PyTorch autograd
+        {"aten::col2im", op::translate_col2im},
         {"aten::contiguous", op::skip_node},  // In openvino how tensors are stored in memory is internal plugin detail,
                                               // we assume all tensors are contiguous
         {"aten::conv_transpose1d", op::translate_conv_transposend},
@@ -319,6 +323,12 @@ const std::map<std::string, PytorchCreatorFunction> get_supported_ops() {
         {"prim::NumToTensor", op::skip_node},  // In openvino we already store number as tensor with shape []
         {"prim::requires_grad", op::return_false_scalar},
         {"torchvision::nms", op::translate_nms},
+        {"aten::append", [](NodeContext& context) {
+            auto new_list = ov::pass::decompose_list_append(
+                context.get_input(0).get_node_shared_ptr(),
+                context.get_input(1));
+            return OutputVector{new_list, new_list};
+        }},
     };
 };
 

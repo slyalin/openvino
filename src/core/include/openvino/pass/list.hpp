@@ -50,6 +50,11 @@ OPENVINO_API Output<Node> decompose_tensor_to_list (
     element::Type shape_type = element::i32
 );
 
+OPENVINO_API Output<Node> decompose_list_stack (
+    std::shared_ptr<Node> list,
+    const int dim   // dimension along which we concatinating tensors
+);
+
 
 }  // namespace pass
 }  // namespace ov

@@ -164,6 +164,7 @@ Output<Node> decompose_list_append (
     auto elements_casted = make_shared<ConvertLike>(elements, item);
     auto flat = make_shared<Reshape>(item, const_value(-1, 1), false);
     auto new_elements = make_shared<Concat>(OutputVector{elements_casted, flat}, 0);
+    new_elements->get_rt_info()["StructPackConcat"];
     auto new_ends = make_shared<Concat>(OutputVector{ends, make_shared<ShapeOf>(new_elements, ends.get_element_type())}, 0);
 
     auto shape_type = shapes.get_element_type();
@@ -179,7 +180,7 @@ Output<Node> decompose_list_append (
 
     std::cerr << "[ LIST ] Near the end of decompose_list_append\n";
     std::cerr << "Shapes after decompose_list_append: " << new_shapes << "\n";
-
+    std::cerr << "Elements after decompose_list_append: " << new_elements << "\n";
 
     return sp->clone_with_new_inputs({new_shapes, new_begins, new_ends, new_elements});
 }
@@ -261,9 +262,11 @@ Output<Node> decompose_list_reserve (
     // FIXME: That's why a padding in one element is used to keep it not empty. In all other operations this element is ignored
     // FIXME: due to nature of index operations. The only exception is in the operation which turns a list to a tensor,
     // FIXME: there will be an extra StridedSlice to cut off this padding.
-    auto elements = opset10::Constant::create(element_type, {1}, {0});
+    // TODO: Tried empty tensor again...
+    auto elements = opset10::Constant::create(element_type, {0}, {0});
 
     std::cerr << "Shapes after decompose_list_reserve: " << shapes << "\n";
+    std::cerr << "Elements after decompose_list_reserve: " << elements << "\n";
 
     return make_shared<StructPack>(
         OutputVector{shapes, indices, indices, elements},
@@ -433,6 +436,46 @@ Output<Node> decompose_tensor_to_list (
         PartialShape::dynamic());
 }
 
+Output<Node> decompose_list_stack (
+    std::shared_ptr<Node> list,
+    const int dim   // dimension along which we concatinating tensors
+) {
+    using namespace opset10;
+    using ov::frontend::tensorflow::StructPack;
 
+    Diagnostics _diag("decompose_list_stack");
+
+    if(dim != 0) {
+        std::cerr << "dim != 0\n";
+        throw "dim != 0";
+    }
+
+    auto sp = std::dynamic_pointer_cast<StructPack>(list);
+    if(!sp) {
+        throw  "[ ERROR ] Coudn't decode StructPack as list at decompose_list_stack\n";
+    }
+
+    auto shapes =   sp->get_input_source_output(0);
+    auto begins =   sp->get_input_source_output(1);
+    auto ends =     sp->get_input_source_output(2);
+    auto elements = sp->get_input_source_output(3);
+
+    auto shape_type = shapes.get_element_type();
+
+    // compute number of tensor elements in the list
+    auto num_elements = make_shared<ShapeOf>(begins, shape_type);
+
+    // FIXME: It is supposed that all shapes are the same
+    auto shape_start = make_shared<Constant>(element::i32, Shape{2}, std::vector<int>{0, 1});
+    auto shape_end = make_shared<Constant>(element::i32, Shape{2}, std::vector<int>{1, 1});
+    typedef std::vector<int64_t> V;
+    auto element_shape = make_shared<StridedSlice>(shapes, shape_start, shape_end, V{0, 0}, V{0, 1});
+    std::cerr << "element_shape = " << element_shape << "\n";
+
+    // restore the real shape of tensor elements
+    auto new_shape = make_shared<Concat>(OutputVector{num_elements, element_shape}, 0);
+    auto reshape = make_shared<Reshape>(elements, new_shape, false);
+    return reshape;
+}
 }
 }

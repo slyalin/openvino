@@ -17,7 +17,9 @@
 #include "openvino/op/subtract.hpp"
 #include "openvino/op/transpose.hpp"
 #include "openvino/op/unsqueeze.hpp"
+#include "openvino/op/str_ops.hpp"
 #include "utils.hpp"
+#include "openvino/core/validation_util.hpp"
 
 namespace ov {
 namespace frontend {
@@ -57,9 +59,28 @@ std::shared_ptr<Node> get_im2col_indices_along_dim(const NodeContext& context,
 }  // namespace
 
 OutputVector translate_im2col(NodeContext& context) {
+    std::cerr << context.get_input(1).get_node_shared_ptr() << '\n';
+    std::cerr << context.get_input(2).get_node_shared_ptr() << '\n';
+    std::cerr << context.get_input(3).get_node_shared_ptr() << '\n';
     num_inputs_check(context, 5, 5);
     auto input = context.get_input(0);
-    auto kernel_size = context.const_input<std::vector<int64_t>>(1);
+
+    std::vector<int64_t> kernel_size;
+
+    std::cerr << context.get_input(1).get_node_shared_ptr() << '\n';
+    std::cerr << context.get_input(2).get_node_shared_ptr() << '\n';
+    std::cerr << context.get_input(3).get_node_shared_ptr() << '\n';
+    if(auto sp = std::dynamic_pointer_cast<tensorflow::StructPack>(context.get_input(1).get_node_shared_ptr())) {
+        // Suppose that this is a list of scalar values
+        // TODO: Check that they are scalars
+        auto elements_input = sp->input_value(3);   // SP for lists has 4 inputs: shapes, begins, ends, elements, we are taking elements
+        auto elements_const = get_constant_from_source(elements_input);
+        std::cerr << "[ im2col with lists ]  elements_const = " << elements_const << "\n";
+    } else {
+        std::cerr << "[ im2col without lists ] cannot recognize SP as input 1\n";
+        kernel_size = context.const_input<std::vector<int64_t>>(1);
+    }
+
     FRONT_END_OP_CONVERSION_CHECK(kernel_size.size() == 2, "kernel size should contains 2 elements");
     auto dilation = context.const_input<std::vector<int64_t>>(2);
     FRONT_END_OP_CONVERSION_CHECK(kernel_size.size() == 2, "dilation should contains 2 elements");

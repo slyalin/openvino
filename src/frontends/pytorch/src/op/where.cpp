@@ -20,7 +20,7 @@ OutputVector translate_where(NodeContext& context) {
     FRONT_END_OP_CONVERSION_CHECK(!context.input_is_none(1), "aten::where(cond) unsupported");
     auto bool_cond = context.mark_node(std::make_shared<v0::Convert>(cond, element::boolean));
     auto x = context.get_input(1);
-    auto y = context.get_input(2);
+    auto y = try_list_of_scalars_concat(context.get_input(2));
     return {context.mark_node(std::make_shared<v1::Select>(bool_cond, x, y))};
 };
 

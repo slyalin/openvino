@@ -20,7 +20,7 @@ using namespace ov::op;
 OutputVector translate_roll(NodeContext& context) {
     num_inputs_check(context, 3, 3);
     const auto data = context.get_input(0);
-    const auto shifts = context.get_input(1);
+    const auto shifts = try_list_of_scalars_concat(context.get_input(1));
     const auto axes = context.get_input(2);
     const auto shifts_pshape = shifts.get_partial_shape();
     const auto axes_pshape = axes.get_partial_shape();

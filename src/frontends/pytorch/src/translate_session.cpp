@@ -181,10 +181,10 @@ OutputVector TranslateSession::convert_node(NodeContext& context) {
         }
 
     } catch (std::runtime_error& e) {
-        OPENVINO_DEBUG << "Exception happened during conversion of op: " << context.get_op_type()
+        std::cerr << "Exception happened during conversion of op: " << context.get_op_type()
                        << " with schema: " << context.get_schema() << ": " << e.what() << '\n';
     } catch (...) {
-        OPENVINO_DEBUG << "Some exception happened during conversion of node of type: " << context.get_op_type()
+        std::cerr << "Some exception happened during conversion of node of type: " << context.get_op_type()
                        << '\n';
     }
     // Create PtFrameworkNode for everything that wasn't able to be converted normally
