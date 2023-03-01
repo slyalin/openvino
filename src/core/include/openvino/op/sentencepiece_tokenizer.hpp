@@ -40,9 +40,16 @@ public:
 
         // TODO: Move to cpp file
 
-        set_output_type(0, element::i64, PartialShape{Dimension(), Dimension(2)});
-        set_output_type(1, element::i32, PartialShape{Dimension()});
-        set_output_type(2, element::i64, PartialShape{2});
+        if(all_inputs_are_constants(this)) {
+            // Fake outputs
+            set_output_type(0, element::i32, PartialShape{10, 2});
+            set_output_type(1, element::i32, PartialShape{10});
+            set_output_type(2, element::i32, PartialShape{2});
+        } else {
+            set_output_type(0, element::i32, PartialShape{Dimension(), Dimension(2)});
+            set_output_type(1, element::i32, PartialShape{Dimension()});
+            set_output_type(2, element::i32, PartialShape{2});
+        }
     }
 
     std::shared_ptr<ov::Node> clone_with_new_inputs(const OutputVector& inputs) const override {
@@ -62,7 +69,10 @@ public:
         // [1] i32 tensor of end indices, indices are offsets in [2]
         // [2] 1D u8 tensor of bytes where all strings are concatenated
 
-
+        auto data = (const char*)inputs[2].data<uint8_t>();
+        size_t len = inputs[2].get_shape()[0];
+        std::string symbols(data, data + len);
+        std::cerr << "symbols at the input in tokenizer: " << symbols << "\n";
         // TODO: Move to cpp file
 
         return true;

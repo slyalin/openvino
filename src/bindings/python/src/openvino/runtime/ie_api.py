@@ -161,7 +161,7 @@ def postprocess_results (outputs: dict, model_outputs, model=None) -> dict:
         #print([key for key in output.get_rt_info()])
         if True: #'structural_type' in output.get_rt_info(): # FIXME: Doesn't work
             outputs[model_outputs[0]] = bytes(outputs[model_outputs[0]]).decode()
-    elif len(model_outputs) == 3:
+    elif False and len(model_outputs) == 3: # Disabled for MUSE... FIXME: Need a normal solution now!
         if True: # detect correct outputs
             begins = outputs[model_outputs[0]]
             ends = outputs[model_outputs[1]]

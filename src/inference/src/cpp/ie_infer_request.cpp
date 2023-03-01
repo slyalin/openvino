@@ -376,7 +376,7 @@ Tensor InferRequest::get_tensor(const ov::Output<const ov::Node>& port) {
         auto blob = _impl->GetBlob(name);
         soVec = {_so, _impl->getPointerToSo()};
         Tensor tensor = {blob, soVec};
-        if (port.get_node_shared_ptr()->get_friendly_name() == "sentence") {
+        if (port.get_node_shared_ptr()->get_friendly_name() == "sentence" || port.get_node_shared_ptr()->get_friendly_name() == "inputs") {
             std::cerr << "Hacking string tensor\n";
             *reinterpret_cast<Tensor**>(tensor.data<uint8_t>()) = &string_tensor;
             std::cerr << &string_tensor << "\n";
