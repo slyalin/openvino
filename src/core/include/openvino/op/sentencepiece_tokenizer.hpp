@@ -34,6 +34,11 @@ public:
         constructor_validate_and_infer_types();
     }
 
+    const int max_size = 10;
+    const std::vector<int32_t> stub_indices = {0, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 1, 0, 1, 1, 1, 2, 1, 3, 1, 4, 1, 5, 1, 6};
+    const std::vector<int32_t> stub_elements = {1, 37967, 12, 433, 9215, 2, 1, 6, 106425, 12, 1400, 9215, 2};
+    const std::vector<int32_t> stub_dims = {2, 7};
+
     void validate_and_infer_types() override {
 
         // Handle validation model and evaluatation mode due to CPU bug (see other ops)
@@ -42,9 +47,15 @@ public:
 
         if(all_inputs_are_constants(this)) {
             // Fake outputs
-            set_output_type(0, element::i32, PartialShape{10, 2});
-            set_output_type(1, element::i32, PartialShape{10});
+            #if 0
+            set_output_type(0, element::i32, PartialShape{Dimension(max_size), Dimension(2)});
+            set_output_type(1, element::i32, PartialShape{max_size});
             set_output_type(2, element::i32, PartialShape{2});
+            #else
+            set_output_type(0, element::i32, PartialShape{Dimension(stub_elements.size()), Dimension(2)});
+            set_output_type(1, element::i32, PartialShape{Dimension(stub_elements.size())});
+            set_output_type(2, element::i32, PartialShape{2});
+            #endif
         } else {
             set_output_type(0, element::i32, PartialShape{Dimension(), Dimension(2)});
             set_output_type(1, element::i32, PartialShape{Dimension()});
@@ -69,11 +80,47 @@ public:
         // [1] i32 tensor of end indices, indices are offsets in [2]
         // [2] 1D u8 tensor of bytes where all strings are concatenated
 
+        // TODO: Implement the kernel
+        // TODO: Move to cpp file
+
+        // Now generate some stub data
+        // TODO: Remove this code from final version
+
         auto data = (const char*)inputs[2].data<uint8_t>();
         size_t len = inputs[2].get_shape()[0];
         std::string symbols(data, data + len);
         std::cerr << "symbols at the input in tokenizer: " << symbols << "\n";
-        // TODO: Move to cpp file
+        size_t batch_size = inputs[0].get_shape()[0];
+        std::cerr << "batch size = " << batch_size << "\n";
+
+        //int offset = 0;
+        //int i;
+        #if 0
+        outputs[2].data<int32_t>()[0] = 0;
+        outputs[2].data<int32_t>()[1] = 0;
+        for(int i = 0, offset = 0; offset < max_size; ++i) {
+            for(int batch = 0; batch < batch_size && offset < max_size; ++batch, ++offset) {
+                outputs[0].data<int32_t>()[2*i + 0] = batch;
+                outputs[0].data<int32_t>()[2*i + 1] = i;
+                outputs[1].data<int32_t>()[offset] = offset;
+                outputs[2].data<int32_t>()[0] = std::max(batch, outputs[2].data<int32_t>()[0]);
+                outputs[2].data<int32_t>()[1] = std::max(i, outputs[2].data<int32_t>()[1]);
+                std::cerr << outputs[0].data<int32_t>()[2*i + 0] << '\n';
+                std::cerr << outputs[0].data<int32_t>()[2*i + 1] << '\n';
+                std::cerr << outputs[1].data<int32_t>()[offset] << '\n';
+                std::cerr << outputs[2].data<int32_t>()[0] << '\n';
+                std::cerr << outputs[2].data<int32_t>()[1] << '\n';
+            }
+        }
+        outputs[2].data<int32_t>()[0]++;
+        outputs[2].data<int32_t>()[1]++;
+        #else
+        std::copy(stub_indices.begin(), stub_indices.end(), outputs[0].data<int32_t>());
+        std::copy(stub_elements.begin(), stub_elements.end(), outputs[1].data<int32_t>());
+        std::copy(stub_dims.begin(), stub_dims.end(), outputs[2].data<int32_t>());
+        #endif
+
+
 
         return true;
     }
