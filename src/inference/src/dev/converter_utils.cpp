@@ -133,9 +133,11 @@ InferenceEngine::CNNNetwork ov::legacy_convert::convert_model(const std::shared_
             std::cerr << "name before: " << cloned->get_parameters()[i]->get_friendly_name() << "\n";
             //model->get_parameters()[i]->set_friendly_name(model->get_parameters()[i]->get_friendly_name() + "/postfix");
             std::cerr << "name after: " << cloned->get_parameters()[i]->get_friendly_name() << "\n";
-            cloned->get_parameters()[i]->get_rt_info()["original_partial_shape"] = cloned->get_parameters()[i]->get_partial_shape();
-            cloned->get_parameters()[i]->set_element_type(element::u8);
-            cloned->get_parameters()[i]->set_partial_shape(PartialShape{sizeof(void*)});
+            if(cloned->get_parameters()[i]->get_element_type() == element::string) {
+                cloned->get_parameters()[i]->get_rt_info()["original_partial_shape"] = cloned->get_parameters()[i]->get_partial_shape();
+                cloned->get_parameters()[i]->set_element_type(element::u8);
+                cloned->get_parameters()[i]->set_partial_shape(PartialShape{sizeof(void*)});
+            }
         }
     }
 
