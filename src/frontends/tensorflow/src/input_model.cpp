@@ -156,6 +156,7 @@ void InputModel::InputModelTFImpl::loadPlaces() {
                 dtype_any.is<ov::element::Type>(),
                 "Incorrect input model: Placeholder node " + placeholder_name + " has unspecified type.");
             auto type = dtype_any.as<ov::element::Type>();
+
             std::vector<std::string> names = {op_name};
             auto tensor_place = std::make_shared<TensorPlace>(m_input_model, pshape, type, names);
             m_tensor_places[op_name] = tensor_place;

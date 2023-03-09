@@ -14,6 +14,7 @@ namespace tensorflow {
 namespace op {
 
 OutputVector translate_placeholder_op(const NodeContext& node) {
+    // FIXME: This code is unreachable
     auto dtype = node.get_attribute<ov::element::Type>("dtype");
     auto shape = node.get_attribute<ov::PartialShape>("shape", ov::PartialShape::dynamic());
     if (shape.rank().is_static() && shape.rank().get_length() == 0 && node.has_attribute("_output_shapes")) {

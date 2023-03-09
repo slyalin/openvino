@@ -11,6 +11,8 @@ using namespace opset8;
 using namespace ov::frontend;
 using namespace frontend::tensorflow::detail;
 
+#define OPENVINO_CUSTOM_INT64_HACK
+
 namespace ov {
 namespace frontend {
 namespace tensorflow {
@@ -38,7 +40,11 @@ OutputVector translate_concat_op(const NodeContext& node) {
             if (node.get_input(input_idx).get_partial_shape().rank().is_static()) {
                 input_rank = node.get_input(input_idx).get_partial_shape().rank();
             }
+            #ifdef OPENVINO_CUSTOM_INT64_HACK
+            inputs.push_back(input_idx == 2 ? std::make_shared<ConvertLike>(node.get_input(input_idx), node.get_input(input_idx-1))->output(0) : node.get_input(input_idx));
+            #else
             inputs.push_back(node.get_input(input_idx));
+            #endif
         }
     } else if (node.get_op_type() == "ConcatV2") {
         std::vector<int64_t> axis_vector;
@@ -52,7 +58,11 @@ OutputVector translate_concat_op(const NodeContext& node) {
             if (node.get_input(input_idx).get_partial_shape().rank().is_static()) {
                 input_rank = node.get_input(input_idx).get_partial_shape().rank();
             }
+            #ifdef OPENVINO_CUSTOM_INT64_HACK
+            inputs.push_back(input_idx == 1 ? std::make_shared<ConvertLike>(node.get_input(input_idx), node.get_input(input_idx-1))->output(0) : node.get_input(input_idx));
+            #else
             inputs.push_back(node.get_input(input_idx));
+            #endif
         }
     } else {
         TENSORFLOW_OP_VALIDATION(node,

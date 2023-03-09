@@ -108,6 +108,7 @@ void TranslateSession::translate_graph(const ov::frontend::InputModel::Ptr& inpu
         // in case of cutting graph, types of custom inputs can be undefined,
         // according to MO help, fp32 is used by default in such cases
         if (input_type == element::undefined) {
+            // FIXME: should be dynamic
             input_type = element::f32;
         }
 
