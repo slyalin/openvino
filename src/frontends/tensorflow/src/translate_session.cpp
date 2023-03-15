@@ -75,6 +75,7 @@ void TranslateSession::inject_body_model(std::shared_ptr<ov::Model> body_model,
 
 void TranslateSession::translate_graph(const ov::frontend::InputModel::Ptr& input_model,
                                        std::shared_ptr<ov::Model>& ov_model) {
+    DecoderBase::OpTypeByName op_type_by_name;
     OpMap ng_op_map;
     ov::ParameterVector params;
     ov::ResultVector results;
@@ -105,10 +106,9 @@ void TranslateSession::translate_graph(const ov::frontend::InputModel::Ptr& inpu
         auto input_shape = input_tensor_place->get_partial_shape();
         auto input_type = input_tensor_place->get_element_type();
 
-        // in case of cutting graph, types of custom inputs can be undefined,
+        // in case of cutting graph, types of custom inputs can be dynamic,
         // according to MO help, fp32 is used by default in such cases
-        if (input_type == element::undefined) {
-            // FIXME: should be dynamic
+        if (input_type == element::dynamic) {
             input_type = element::f32;
         }
 
@@ -122,6 +122,7 @@ void TranslateSession::translate_graph(const ov::frontend::InputModel::Ptr& inpu
     for (const auto& operation_place : operation_places) {
         auto operation_decoder = operation_place->get_decoder();
         auto operation_name = operation_place->get_names()[0];
+        op_type_by_name[operation_name] = operation_decoder->get_op_type();
         // output for parameter nodes has been already generated
         if (ng_op_map.count(operation_name)) {
             continue;
@@ -143,7 +144,7 @@ void TranslateSession::translate_graph(const ov::frontend::InputModel::Ptr& inpu
             std::string producer_name;
             size_t producer_port_idx;
             try {
-                operation_decoder->get_input_node(input_port_idx, producer_name, producer_port_idx);
+                operation_decoder->get_input_node(input_port_idx, producer_name, producer_port_idx, op_type_by_name);
             } catch (const std::exception&) {
                 FRONT_END_THROW("[ ERROR ] Exception happened when preparing input " + std::to_string(input_port_idx) +
                                 " for op '" + operation_decoder->get_op_name() + "', expected input name: '" +
@@ -201,9 +202,19 @@ void TranslateSession::translate_graph(const ov::frontend::InputModel::Ptr& inpu
         ov::OutputVector ov_outputs;
         auto operation_type = operation_decoder->get_op_type();
         if (m_translator_map->count(operation_type)) {
-            auto translator = m_translator_map->at(operation_decoder->get_op_type());
-            NodeContext node_context(operation_decoder, ov_inputs, this);
-            ov_outputs = translator(node_context);
+            try {
+                auto translator = m_translator_map->at(operation_decoder->get_op_type());
+                NodeContext node_context(operation_decoder, ov_inputs, this);
+                ov_outputs = translator(node_context);
+            } catch (const std::exception&) {
+                // continue translation by replacing with FrameworkNode
+                // in case of any failures in translators due to their limitation
+                auto fw_node = std::make_shared<FrameworkNode>(operation_decoder,
+                                                               ov_inputs,
+                                                               operation_place->get_output_ports().size());
+                set_node_name(operation_name, fw_node);
+                ov_outputs = fw_node->outputs();
+            }
         } else if (auto body_ov_model = get_body_ov_model(operation_type)) {
             inject_body_model(body_ov_model, operation_type, ov_inputs, ov_outputs);
 
@@ -282,7 +293,7 @@ void TranslateSession::translate_graph(const ov::frontend::InputModel::Ptr& inpu
                 std::string producer_name;
                 size_t producer_port_idx;
                 try {
-                    operation_decoder->get_input_node(port_index, producer_name, producer_port_idx);
+                    operation_decoder->get_input_node(port_index, producer_name, producer_port_idx, op_type_by_name);
                 } catch (const std::exception&) {
                     FRONT_END_THROW("[ ERROR ] Exception happened when preparing input " + std::to_string(port_index) +
                                     " for op '" + operation_decoder->get_op_name() + "', expected input name: '" +
