@@ -58,7 +58,7 @@ OutputVector translate_parallel_dynamic_stitch_op(const NodeContext& node) {
     auto indices = make_shared<Concat>(indices_to_concat, 0);
     auto data_shape = make_shared<ShapeOf>(update, ov::element::i32);
 
-    auto zero = make_shared<Constant>(data_element_type, Shape{}, 0);
+    auto zero = create_same_type_const_scalar<float>(node.get_input(N), 0);
     auto zeros = make_shared<Broadcast>(zero, data_shape);
     auto max_idx = make_shared<ReduceMax>(indices, Constant::create(element::i32, {1}, {0}), true);
     auto stop = make_shared<Add>(max_idx->output(0), const_one);
