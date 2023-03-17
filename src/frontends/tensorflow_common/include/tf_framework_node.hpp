@@ -21,7 +21,8 @@ public:
         : ov::op::util::FrameworkNode(inputs, std::max(num_outputs, size_t(1))),
           m_decoder(decoder) {
         ov::op::util::FrameworkNodeAttrs attrs;
-        attrs.set_type_name(m_decoder->get_op_type());
+        m_op_type = m_decoder->get_op_type();
+        attrs.set_type_name(m_op_type);
         set_attrs(attrs);
 
         validate_and_infer_types();
@@ -38,7 +39,7 @@ public:
     }
 
     std::string get_op_type() const {
-        return m_decoder->get_op_type();
+        return m_op_type;
     }
 
     std::shared_ptr<DecoderBase> get_decoder() const {
@@ -47,6 +48,7 @@ public:
 
 private:
     std::shared_ptr<DecoderBase> m_decoder;
+    std::string m_op_type;
 };
 }  // namespace tensorflow
 }  // namespace frontend
