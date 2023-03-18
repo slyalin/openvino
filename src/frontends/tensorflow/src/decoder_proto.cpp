@@ -328,6 +328,9 @@ void parse_producer_name(const std::string& producer_port_name,
         {"FusedBatchNormV2:batch_variance", 2},
         {"FusedBatchNormV3:batch_mean", 1},
         {"FusedBatchNormV3:batch_variance", 2},
+        {"RaggedTensorToSparse:sparse_indices", 0},
+        {"RaggedTensorToSparse:sparse_values", 1},
+        {"RaggedTensorToSparse:sparse_dense_shape", 2},
     };
     // Body graph nodes may have two colons `:` input names, for example,
     // `TopKV2Name:indices:0` means that producer operation name is `TopKV2Name`
@@ -369,6 +372,7 @@ void DecoderProto::get_input_node(size_t input_port_idx,
                                   std::string& producer_name,
                                   size_t& producer_output_port_index) const {
     const std::string producer_port_name = m_node_def->input(static_cast<int>(input_port_idx));
+    //std::cerr << "producer_port_name:" << producer_port_name << "\n";
     parse_producer_name(producer_port_name, producer_name, producer_output_port_index, {});
 }
 
@@ -377,6 +381,7 @@ void DecoderProto::get_input_node(size_t input_port_idx,
                                   size_t& producer_output_port_index,
                                   const OpTypeByName& op_type_by_name) const {
     const std::string producer_port_name = m_node_def->input(static_cast<int>(input_port_idx));
+    //std::cerr << "producer_port_name:" << producer_port_name << "\n";
     parse_producer_name(producer_port_name, producer_name, producer_output_port_index, op_type_by_name);
 }
 

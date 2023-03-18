@@ -22,6 +22,7 @@ public:
           m_decoder(decoder) {
         ov::op::util::FrameworkNodeAttrs attrs;
         m_op_type = m_decoder->get_op_type();
+        //m_op_type = "FrameworkNodeLostType";
         attrs.set_type_name(m_op_type);
         set_attrs(attrs);
 
@@ -43,7 +44,7 @@ public:
     }
 
     std::shared_ptr<DecoderBase> get_decoder() const {
-        return m_decoder;
+        return m_decoder;//nullptr;
     }
 
 private:

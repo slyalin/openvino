@@ -40,7 +40,7 @@ ov::Output<ov::Node> create_same_type_const_scalar(const ov::Output<ov::Node>& s
     } else {
         ov::Output<ov::Node> const_res =
             std::make_shared<ov::opset10::Constant>(ov::element::from<T>(), ov::Shape{}, value);
-        const_res = std::make_shared<ov::opset10::ConvertLike>(same_type_output, const_res);
+        const_res = std::make_shared<ov::opset10::ConvertLike>(const_res, same_type_output);
         return const_res;
     }
 }
