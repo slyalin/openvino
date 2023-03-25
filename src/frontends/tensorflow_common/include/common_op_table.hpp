@@ -23,6 +23,7 @@ namespace frontend {
 namespace tensorflow {
 namespace op {
 #define OP_CONVERTER(op) OutputVector op(const ov::frontend::NodeContext& node)
+#define OP_CONVERTER_NAMED(op) NamedOutputVector op(const ov::frontend::NodeContext& node)
 #define OP_T_CONVERTER(op) \
     template <class T>     \
     OutputVector op(const ov::frontend::NodeContext& node)
@@ -143,7 +144,7 @@ OP_CONVERTER(translate_x_div_y_op);
 OP_CONVERTER(translate_zeros_like_op);
 
 // Translators for internal operations
-OP_CONVERTER(translate_unique_op);
+OP_CONVERTER_NAMED(translate_unique_op);
 
 }  // namespace op
 }  // namespace tensorflow
