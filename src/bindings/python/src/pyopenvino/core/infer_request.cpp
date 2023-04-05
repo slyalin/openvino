@@ -7,6 +7,7 @@
 #include <pybind11/functional.h>
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
+#include <chrono>
 
 #include <string>
 
@@ -19,7 +20,11 @@ inline py::dict run_sync_infer(InferRequestWrapper& self) {
     {
         py::gil_scoped_release release;
         *self.m_start_time = Time::now();
+        //using namespace std;
+        //auto p1 = chrono::steady_clock::now();
         self.m_request.infer();
+        //auto p2 = chrono::steady_clock::now();
+        //std::cerr << "p1..p2 = " << chrono::duration_cast<chrono::milliseconds>(p2 - p1).count() << '\n';
         *self.m_end_time = Time::now();
     }
     return Common::outputs_to_dict(self);
@@ -169,8 +174,14 @@ void regclass_InferRequest(py::module m) {
     cls.def(
         "infer",
         [](InferRequestWrapper& self, const ov::Tensor& inputs) {
+            //using namespace std;
+            //auto p1 = chrono::steady_clock::now();
             self.m_request.set_input_tensor(inputs);
-            return run_sync_infer(self);
+            //auto p2 = chrono::steady_clock::now();
+            auto tmp = run_sync_infer(self);
+            //auto p3 = chrono::steady_clock::now();
+            //std::cerr << "p1..p2 = " << chrono::duration_cast<chrono::milliseconds>(p2 - p1).count() << ", p2..p3 = " << chrono::duration_cast<chrono::milliseconds>(p3 - p2).count() << '\n';
+            return tmp;
         },
         py::arg("inputs"),
         R"(
@@ -303,7 +314,7 @@ void regclass_InferRequest(py::module m) {
             self.m_request.wait();
         },
         R"(
-            Waits for the result to become available. 
+            Waits for the result to become available.
             Blocks until the result becomes available.
 
             GIL is released while running this function.
@@ -457,7 +468,7 @@ void regclass_InferRequest(py::module m) {
         },
         R"(
             Gets output tensor of InferRequest.
-            
+
             :return: An output Tensor for the model.
                      If model has several outputs, an exception is thrown.
             :rtype: openvino.runtime.Tensor
@@ -652,7 +663,7 @@ void regclass_InferRequest(py::module m) {
         },
         R"(
             Gets all input tensors of this InferRequest.
-            
+
             :rtype: List[openvino.runtime.Tensor]
             )");
 
@@ -664,7 +675,7 @@ void regclass_InferRequest(py::module m) {
         },
         R"(
             Gets all output tensors of this InferRequest.
-            
+
             :rtype: List[openvino.runtime.Tensor]
             )");
 
@@ -672,7 +683,7 @@ void regclass_InferRequest(py::module m) {
                               &InferRequestWrapper::get_input_tensors,
                               R"(
                                 Gets all input tensors of this InferRequest.
-                                
+
                                 :rtype: List[openvino.runtime.Tensor]
                               )");
 
@@ -681,7 +692,7 @@ void regclass_InferRequest(py::module m) {
                               R"(
 
                                 Gets all output tensors of this InferRequest.
-                                
+
                                 :rtype: List[openvino.runtime.Tensor]
                               )");
 
@@ -692,7 +703,7 @@ void regclass_InferRequest(py::module m) {
         },
         R"(
             Gets latency of this InferRequest.
-            
+
             :rtype: float
         )");
 
@@ -707,7 +718,7 @@ void regclass_InferRequest(py::module m) {
             Not all plugins provide meaningful data!
 
             GIL is released while running this function.
-            
+
             :return: Inference time.
             :rtype: List[openvino.runtime.ProfilingInfo]
         )");
