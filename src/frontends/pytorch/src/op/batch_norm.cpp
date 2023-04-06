@@ -60,7 +60,8 @@ OutputVector translate_batch_norm(NodeContext& context) {
     auto epsilon = context.const_input<float>(7);
     // Input with index 8 is flag "cudnn_enabled" we can ignore it
     return {context.mark_node(
-        std::make_shared<v5::BatchNormInference>(input, weight, bias, running_mean, running_var, epsilon))};
+        std::make_shared<v0::Unsqueeze>(std::make_shared<v5::BatchNormInference>(input, weight, bias, running_mean, running_var, epsilon),
+        v0::Constant::create(element::i32, Shape{1}, {0}))) };
 };
 
 }  // namespace op

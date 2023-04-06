@@ -3,6 +3,7 @@
 //
 
 #include "openvino/frontend/pytorch/node_context.hpp"
+#include "openvino/op/unsqueeze.hpp"
 #include "openvino/op/max_pool.hpp"
 #include "utils.hpp"
 
@@ -30,7 +31,8 @@ OutputVector translate_max_poolnd(NodeContext& context) {
     }
 
     return {context.mark_node(
-        std::make_shared<v8::MaxPool>(context.get_input(0), strides, dilations, pads, pads, kernel, rounding_type))};
+        std::make_shared<v0::Unsqueeze>(std::make_shared<v8::MaxPool>(context.get_input(0), strides, dilations, pads, pads, kernel, rounding_type),
+        v0::Constant::create(element::i32, Shape{1}, {0}))) };
 };
 
 }  // namespace op
