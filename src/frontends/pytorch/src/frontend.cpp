@@ -145,9 +145,14 @@ void FrontEnd::add_extension(const std::shared_ptr<ov::Extension>& extension) {
             return conv_ext->get_converter()(context);
         };
     } else if (auto conv_ext = std::dynamic_pointer_cast<ov::frontend::pytorch::ConversionExtension>(extension)) {
+        std::cerr << "[ REGISTERING CONVERSION EXTENSION ]\n";
         m_conversion_extensions.push_back(conv_ext);
         m_op_translators[conv_ext->get_op_type()] = [=](const NodeContext& context) {
-            return conv_ext->get_converter()(context);
+            std::cerr << "[ CALLING CONVERSION EXTENSION ]\n";
+            auto result = conv_ext->get_converter()(context);
+            std::cerr << "[ CALLED CONVERSION EXTENSION ]\n";
+            //std::cerr << result;
+            return result;
         };
     } else if (const auto& so_ext = std::dynamic_pointer_cast<ov::detail::SOExtension>(extension)) {
         add_extension(so_ext->extension());

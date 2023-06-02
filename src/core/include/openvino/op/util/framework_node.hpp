@@ -109,6 +109,74 @@ private:
     FrameworkNodeAttrs m_attrs;
     size_t m_num_bodies;
 };
+
+
+class OPENVINO_API TuplePack : public ov::op::Op {
+public:
+    OPENVINO_OP("TuplePack");
+
+    TuplePack () = default;
+
+    TuplePack(ov::OutputVector inputs)
+        : ov::op::Op(inputs) {
+        constructor_validate_and_infer_types();
+    }
+
+    void validate_and_infer_types() override;
+
+    std::shared_ptr<ov::Node> clone_with_new_inputs(const ov::OutputVector& inputs) const override {
+        auto result = std::make_shared<TuplePack>(inputs);
+        return result;
+    }
+
+    bool visit_attributes(ov::AttributeVisitor& visitor) override {
+        return true;
+    }
+
+    bool has_evaluate() const override {
+        return true;
+    }
+
+    bool evaluate(ov::TensorVector& outputs, const ov::TensorVector& inputs) const override;
+};
+
+
+class OPENVINO_API TupleUnpack : public ov::op::Op {
+public:
+    OPENVINO_OP("TupleUnpack");
+
+    TupleUnpack () = default;
+
+    TupleUnpack(ov::OutputVector inputs, size_t num_of_outputs, const std::vector<size_t>& ranks = {})
+        : ov::op::Op(inputs), m_num_of_outputs(num_of_outputs), m_ranks(ranks) {
+        constructor_validate_and_infer_types();
+    }
+
+    void validate_and_infer_types() override;
+
+    std::shared_ptr<ov::Node> clone_with_new_inputs(const ov::OutputVector& inputs) const override {
+        auto result = std::make_shared<TupleUnpack>(inputs, m_num_of_outputs, m_ranks);
+        return result;
+    }
+
+    bool visit_attributes(ov::AttributeVisitor& visitor) override {
+        visitor.on_attribute("num_of_outputs", m_num_of_outputs);
+        return true;
+    }
+
+    bool has_evaluate() const override {
+        return true;
+    }
+
+    bool evaluate(ov::TensorVector& outputs, const ov::TensorVector& inputs) const override;
+
+private:
+
+    size_t m_num_of_outputs = 0;
+    std::vector<size_t> m_ranks;
+};
+
+
 }  // namespace util
 }  // namespace op
 }  // namespace ov

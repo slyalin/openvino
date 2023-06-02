@@ -196,3 +196,36 @@ bool ov::op::util::FrameworkNode::visit_attributes(AttributeVisitor& visitor) {
 
 ov::AttributeAdapter<ov::op::util::FrameworkNodeAttrs>::AttributeAdapter(ov::op::util::FrameworkNodeAttrs& value)
     : DirectValueAccessor<ov::op::util::FrameworkNodeAttrs>(value) {}
+
+
+void ov::op::util::TuplePack::validate_and_infer_types() {
+    // TODO: Revert to dynamic, now set to u8 to simplify model visualization and further execution in the CPU plugin
+    //set_output_type(0, element::dynamic, PartialShape::dynamic());
+    set_output_type(0, element::u8, PartialShape{-1});
+}
+
+
+bool ov::op::util::TuplePack::evaluate(ov::TensorVector& outputs, const ov::TensorVector& inputs) const {
+    std::cerr << "[ ERROR ] TuplePack::evaluate is not implemented\n";
+    return true;
+}
+
+void ov::op::util::TupleUnpack::validate_and_infer_types() {
+    OPENVINO_ASSERT(
+        get_input_size() == 1,
+        "Number of inputs for TupleUnpack is not equal to 1");
+
+    for(size_t i = 0; i < m_num_of_outputs; ++i) {
+        //set_output_type(i, element::dynamic, PartialShape::dynamic());
+        if(i < m_ranks.size()) {
+            set_output_type(i, element::f32, PartialShape::dynamic(m_ranks[i]));  // FIXME: Hardcoded f32 as WA; it is complicated to infer required data type
+        } else {
+            set_output_type(i, element::u8, PartialShape{-1});  // FIXME: Hardcoded u8
+        }
+    }
+}
+
+bool ov::op::util::TupleUnpack::evaluate(ov::TensorVector& outputs, const ov::TensorVector& inputs) const {
+    std::cerr << "[ ERROR ] TupleUnpack::evaluate is not implemented\n";
+    return true;
+}
