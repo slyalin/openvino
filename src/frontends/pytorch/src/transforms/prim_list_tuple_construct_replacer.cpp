@@ -15,6 +15,7 @@ namespace frontend {
 namespace pytorch {
 namespace pass {
 
+
 bool DecomposeListTupleResults::run_on_model(const std::shared_ptr<Model>& model) {
     bool at_least_one_decomposed = false;
     std::queue<std::shared_ptr<ov::op::v0::Result>> results;
@@ -25,7 +26,8 @@ bool DecomposeListTupleResults::run_on_model(const std::shared_ptr<Model>& model
         auto result = results.front();
         results.pop();
         auto input_node = result->get_input_node_shared_ptr(0);
-        auto tuple_construct = cast_fw_node(input_node, "prim::TupleConstruct");
+        //auto tuple_construct = cast_fw_node(input_node, "prim::TupleConstruct");
+        auto tuple_construct = std::dynamic_pointer_cast<ov::op::util::TuplePack>(input_node);
         auto list_construct = cast_fw_node(input_node, "prim::ListConstruct");
         if (!tuple_construct && !list_construct) {
             continue;
@@ -43,7 +45,9 @@ bool DecomposeListTupleResults::run_on_model(const std::shared_ptr<Model>& model
             }
             auto new_result = std::make_shared<ov::op::v0::Result>(out);
             model->add_results({new_result});
-            results.push(new_result);
+            // Disable recursive flattening of tuple of tuple of...
+            // TODO: Make sure without the flattening we don't brake something
+            //results.push(new_result);
             model->remove_result(result);
             at_least_one_decomposed = true;
         }

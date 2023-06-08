@@ -202,3 +202,6 @@ _OPENVINO_OP_REG(IsFinite, ov::op::v10)
 _OPENVINO_OP_REG(IsInf, ov::op::v10)
 _OPENVINO_OP_REG(IsNaN, ov::op::v10)
 _OPENVINO_OP_REG(Unique, ov::op::v10)
+
+_OPENVINO_OP_REG(TuplePack, ov::op::util)
+_OPENVINO_OP_REG(TupleUnpack, ov::op::util)

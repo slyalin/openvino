@@ -483,7 +483,7 @@ struct INFERENCE_ENGINE_1_0_DEPRECATED PrecisionTrait<Precision::UNSPECIFIED> {
 };
 
 template <>
-struct INFERENCE_ENGINE_1_0_DEPRECATED PrecisionTrait<Precision::STRING> {
+struct PrecisionTrait<Precision::STRING> {
     using value_type = std::string;
     enum { is_float = false };
 };

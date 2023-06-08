@@ -74,7 +74,7 @@ public:
         return true;
     }
 
-    bool has_evaluate() const {
+    bool has_evaluate() const override {
         return false;
     }
 

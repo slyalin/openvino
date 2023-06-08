@@ -8,6 +8,7 @@
 #include "ngraph/deprecated.hpp"
 #include "ngraph/log.hpp"
 #include "ngraph/ops.hpp"
+#include "openvino/op/util/framework_node.hpp"
 #include "openvino/opsets/opset.hpp"
 #include "openvino/util/log.hpp"
 

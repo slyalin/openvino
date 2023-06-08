@@ -12,6 +12,41 @@ namespace frontend {
 namespace pytorch {
 namespace op {
 
+
+void override_parameter (std::shared_ptr<ov::Node> node, element::Type type, const PartialShape& shape) {
+    if (auto parameter = std::dynamic_pointer_cast<ov::opset10::Parameter>(node)) {
+        // TODO: Apply this change conditionally based on real Parameter value
+        std::cerr << "Overriding Parameter element_type to " << type << " and shape " << shape << "\n";
+        parameter->set_partial_shape(shape);
+        parameter->set_element_type(type);
+        parameter->validate_and_infer_types();
+    }
+}
+
+OutputVector tuple_unpack(const NodeContext& node) {
+    std::cerr << "[ tuple_unpack ] Attempt to retrive output types/shapes\n";
+
+    auto input_node = node.get_input(0).get_node_shared_ptr();
+    override_parameter(input_node, element::u8, PartialShape{Dimension()});
+
+    std::vector<size_t> ranks;
+    for(size_t i = 0; i < node.get_output_size(); ++i) {
+        auto output_type = node.get_decoder()->get_output_type(i);
+        auto output_shape = node.get_decoder()->get_output_shape(i); // FIXME: Shapes and ranks are not guaranteed to be restorable; have to implement reverse shape/type inference as a robust solution
+        //std::cerr << "    " << (output_type.is<element::Type>() ? output_type.as<element::Type>() : element::dynamic) << ", " << node.get_decoder()->get_output_shape(i) << "\n";
+        if(output_shape.rank().is_dynamic()) {
+            break;  // cannot do anything if ranks are dynamic
+        }
+        ranks.push_back(output_shape.rank().get_length());
+    }
+    return std::make_shared<ov::op::util::TupleUnpack>(node.inputs(), node.get_output_size(), ranks)->outputs();
+}
+
+
+OutputVector tuple_pack(const NodeContext& node) {
+    return std::make_shared<ov::op::util::TuplePack>(node.inputs())->outputs();
+}
+
 #define OP_CONVERTER(op) OutputVector op(const NodeContext& node)
 
 OP_CONVERTER(translate_adaptive_avg_pool3d);
@@ -383,6 +418,8 @@ const std::map<std::string, CreatorFunction> get_supported_ops() {
         {"torchvision::deform_conv2d", op::translate_deform_conv},
         {"torchvision::nms", op::translate_nms},
         {"torchvision::roi_align", op::translate_roi_align},
+        {"prim::TupleUnpack", op::tuple_unpack},
+        {"prim::TupleConstruct", op::tuple_pack},
     };
 };
 

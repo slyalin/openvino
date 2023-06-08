@@ -15,6 +15,7 @@
 #endif
 
 #include "ngraph/ops.hpp"
+#include "openvino/op/util/framework_node.hpp"
 
 namespace ngraph {
 namespace opset10 {
