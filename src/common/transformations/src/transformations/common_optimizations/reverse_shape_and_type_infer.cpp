@@ -61,7 +61,8 @@ bool ov::pass::ReverseShapeAndTypeInfer::run_on_model(const std::shared_ptr<ov::
         auto output_shape = op->get_output_partial_shape(0);
         auto output_type = op->get_output_element_type(0);
         if (const auto& param = std::dynamic_pointer_cast<Parameter>(op)) {
-            if (param->get_partial_shape().rank().is_dynamic()) {
+            if (param->get_partial_shape().is_dynamic()) {
+                // TODO: check that shapes are mergable, it is unlikely not mergable as we should start with a validated/consistent graph
                 param->set_partial_shape(output_shape);
                 is_changed = true;
             }
@@ -154,8 +155,11 @@ bool ov::pass::ReverseShapeAndTypeInfer::run_on_model(const std::shared_ptr<ov::
                 auto input_pshape = output_shape;
                 input_pshape[axis] = Dimension::dynamic();
                 for (auto idx : input_idxs) {
-                    if (idx < op->get_input_size() && op->get_input_partial_shape(idx).rank().is_dynamic()) {
-                        op->get_input_tensor(idx).m_partial_shape = input_pshape;
+                    if (idx < op->get_input_size()) {
+                        auto resulting_ps = op->get_input_tensor(idx).m_partial_shape;
+                        if(PartialShape::merge_into(resulting_ps, input_pshape)) {
+                            op->get_input_tensor(idx).m_partial_shape = resulting_ps;
+                        }
                         is_changed = true;
                     }
                 }
