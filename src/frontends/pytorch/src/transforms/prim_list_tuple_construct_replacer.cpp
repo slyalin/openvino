@@ -47,7 +47,7 @@ bool DecomposeListTupleResults::run_on_model(const std::shared_ptr<Model>& model
             model->add_results({new_result});
             // Disable recursive flattening of tuple of tuple of...
             // TODO: Make sure without the flattening we don't brake something
-            //results.push(new_result);
+            results.push(new_result);
             model->remove_result(result);
             at_least_one_decomposed = true;
         }
