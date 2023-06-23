@@ -52,6 +52,20 @@ def get_value_from_list_or_dict(container, name, idx):
     return None
 
 
+def flattenize(res):
+    results = []
+    for res_item in res:
+        # if None is at output we skip it
+        if res_item is None:
+            continue
+        # If input is list or tuple flattenize it
+        if isinstance(res_item, (list, tuple)):
+            decomposed_res = flattenize(res_item)
+            results.extend(decomposed_res)
+            continue
+        results.append(res_item)
+    return results
+
 def extract_input_info_from_example(args, inputs):
     try:
         from openvino.frontend.pytorch.decoder import pt_to_ov_type_map
@@ -66,10 +80,16 @@ def extract_input_info_from_example(args, inputs):
     input_names = None if not is_dict_input else list(example_inputs)
     if not isinstance(list_inputs, (list, tuple)):
         list_inputs = [list_inputs]
+     
+    flatten_list_inputs = flattenize(list_inputs)
+    if len(flatten_list_inputs) != len(list_inputs):
+        args.inputs_overriden = True
+        return
     if not data_types and input_names is None:
         data_types = []
     if not input_shapes and input_names is None:
         input_shapes = []
+    
     if inputs:
         for input_id, input_info in enumerate(inputs):
             input_name = input_info.name
@@ -96,7 +116,7 @@ def extract_input_info_from_example(args, inputs):
             update_list_or_dict(data_types, input_name, input_id, example_dtype.to_dtype())
             update_list_or_dict(input_shapes, input_name, input_id, input_shape)
     else:
-        for input_id, example_input in enumerate(list_inputs):
+        for input_id, example_input in enumerate(flatten_list_inputs):
             dtype = getattr(example_input, "dtype", type(example_input))
             ov_dtype = pt_to_ov_type_map.get(str(dtype))
             data_rank = getattr(example_input, "ndim", 0)
@@ -208,3 +228,35 @@ def prepare_torch_inputs(example_inputs, input_shape, input_info=None, allow_non
         if not allow_none:
             raise Error("Please provide input_shape or example_input for converting PyTorch model.")
     return inputs
+
+
+def pytorch_process_after_convert(argv, ov_model):
+    import torch
+    from openvino.frontend.pytorch.decoder import pt_to_ov_type_map
+
+    example_inputs = getattr(argv, "example_input", None)
+    if example_inputs is not None:
+        provide_shapes = argv.placeholder_shapes is not None
+        is_dict_input = isinstance(example_inputs, dict)
+        list_inputs = list(example_inputs.values()) if is_dict_input else example_inputs
+        list_inputs =  [list_inputs] if isinstance(list_inputs, torch.Tensor) else list_inputs
+        flatten_list_inputs = flattenize(list_inputs)
+        
+        for idx, input_tensor in enumerate(ov_model.inputs):
+            if is_dict_input:
+                input_data = example_inputs.get(input_tensor.any_name, flatten_list_inputs[idx])
+            else:
+                input_data = flatten_list_inputs[idx]
+            if input_tensor.get_element_type().is_dynamic():
+                pt_dtype = getattr(input_data, "dtype", type(input_data))
+                dtype = pt_to_ov_type_map.get(str(pt_dtype))
+                if dtype is None:
+                    raise Error(f"Unknown input dtype {pt_dtype}")
+
+                input_tensor.get_node().set_element_type(dtype)
+            if not provide_shapes and input_tensor.get_partial_shape().rank.is_dynamic:
+                shape = [-1] * len(input_data.shape)
+                input_tensor.get_node().set_partial_shape(PartialShape(shape))
+
+        ov_model.validate_nodes_and_infer_types() 
+    return ov_model

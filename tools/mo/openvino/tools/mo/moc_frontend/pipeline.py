@@ -21,6 +21,7 @@ from openvino.tools.mo.moc_frontend.extractor import fe_user_data_repack, conver
 from openvino.tools.mo.moc_frontend.layout_utils import update_layout_to_dict, get_dimension_index_by_label
 from openvino.tools.mo.utils.class_registration import get_enabled_and_disabled_transforms
 from openvino.tools.mo.utils.error import Error
+from openvino.tools.mo.moc_frontend.pytorch_frontend_utils import pytorch_process_after_convert
 
 
 def moc_pipeline(argv: argparse.Namespace, moc_front_end: FrontEnd):
@@ -272,6 +273,9 @@ def moc_pipeline(argv: argparse.Namespace, moc_front_end: FrontEnd):
             input_model.set_partial_shape(place, new_partial_shape)
 
     ov_model = moc_front_end.convert(input_model)
+
+    if argv.framework == "pytorch" and getattr(argv, "inputs_overriden", False):
+        pytorch_process_after_convert(argv, ov_model)
 
     if argv.batch is not None and argv.batch > 0 and len(deferred_batch_names) > 0:
         # Frontend convert method can include reverse infer functionality that can deduce undefined input shapes
