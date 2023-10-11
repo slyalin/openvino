@@ -133,7 +133,13 @@ void InferRequestBase::PullStates() {
             for (const auto& state : memoryStates) {
                 if (state->GetName() == cur_id) {
                     auto storage = cur_node->getStore();
-                    auto blob = make_blob_with_precision(MemoryDescUtils::convertToTensorDesc(storage->getDesc()), storage->getData());
+                    auto blob = make_blob_with_precision(MemoryDescUtils::convertToTensorDesc(storage->getDesc()));
+                    blob->allocate();
+                    auto data_ptr = blob->cbuffer().as<void*>();
+                    auto data_size = blob->byteSize();
+                    auto current_mem_buf = static_cast<uint8_t*>(storage->getData());
+                    cpu_memcpy(data_ptr, current_mem_buf, data_size);
+
                     state->SetState(blob);
                 }
             }
