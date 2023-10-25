@@ -96,7 +96,7 @@ void InferRequestBase::pushInput(const std::string& inputName, InferenceEngine::
     graph->PushInputData(inputName, needConvert ? iconv : inputBlob);
 }
 
-// state -> storage
+// state -> node
 void InferRequestBase::AssignStates() {
     for (auto &node : graph->GetNodes()) {
         if (node->getType() == Type::MemoryInput) {
@@ -148,7 +148,7 @@ void InferRequestBase::InferImpl() {
 
     PushInputData();
 
-    // state -> storage
+    // state -> node
     if (memoryStates.size() != 0) {
         AssignStates();
     }
