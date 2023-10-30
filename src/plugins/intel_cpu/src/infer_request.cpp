@@ -60,7 +60,7 @@ void InferRequestBase::CreateInferRequest() {
             }
 
             memoryStates.emplace_back(
-                std::make_shared<VariableState>(state_name, memoryNode->memoryBuilder(), memoryNode->getMemoryPtr()));
+                std::make_shared<VariableStateDoubleBuffer>(state_name, memoryNode->memoryBuilder(), memoryNode->getMemoryPtr()));
         }
     }
 }
@@ -114,6 +114,10 @@ void InferRequestBase::AssignStates() {
     }
 }
 
+void InferRequestBase::CommitStates() {
+    std::for_each(memoryStates.begin(), memoryStates.end(), [](const MemStatePtr& state) { state->Commit(); });
+}
+
 void InferRequestBase::redefineMemoryForInputNodes() {
     const auto cpuInputNodes = graph->GetInputNodesMap();
 
@@ -149,7 +153,7 @@ void InferRequestBase::InferImpl() {
     PushInputData();
 
     // state -> node
-    if (memoryStates.size() != 0) {
+    if (!memoryStates.empty()) {
         AssignStates();
     }
 
@@ -162,6 +166,10 @@ void InferRequestBase::InferImpl() {
         for (auto&& item : outputControlBlocks) {
             item.second.update();
         }
+    }
+
+    if (!memoryStates.empty()) {
+        CommitStates();
     }
 
     graph->PullOutputData(_outputs);

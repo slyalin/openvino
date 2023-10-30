@@ -116,6 +116,7 @@ protected:
 
 private:
     void AssignStates();
+    void CommitStates();
     void redefineMemoryForInputNodes();
 
     std::shared_ptr<ExecNetwork>        execNetwork;
