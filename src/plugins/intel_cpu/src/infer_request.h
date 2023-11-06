@@ -10,6 +10,7 @@
 #include <map>
 #include <cpp_interfaces/interface/ie_iinfer_request_internal.hpp>
 #include "cpu_tensor.h"
+#include "memory_state.h"
 
 namespace ov {
 namespace intel_cpu {
@@ -92,7 +93,7 @@ protected:
         }
 
         void update() {
-            m_proxyMemMngr->setMemMngr(currentMemMngr());
+            m_proxyMemMngr->setMemMngrResize(currentMemMngr());
             m_blob->allocate(); // WA: update handle
         }
 
@@ -114,13 +115,13 @@ protected:
     std::unordered_map<std::string, OutputControlBlock> outputControlBlocks;
 
 private:
-    void PushStates();
-    void PullStates();
+    void AssignStates();
+    void CommitStates();
     void redefineMemoryForInputNodes();
 
     std::shared_ptr<ExecNetwork>        execNetwork;
     openvino::itt::handle_t             profilingTask;
-    std::vector<std::shared_ptr<InferenceEngine::IVariableStateInternal>> memoryStates;
+    std::vector<MemStatePtr>            memoryStates;
     AsyncInferRequest*                  _asyncRequest = nullptr;
 
 protected:

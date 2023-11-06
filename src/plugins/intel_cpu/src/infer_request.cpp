@@ -47,19 +47,12 @@ void InferRequestBase::CreateInferRequest() {
     // producer as storage for tensor to keep it between infer calls.
     for (auto& node : graph->GetNodes()) {
         if (node->getType() == Type::MemoryInput) {
-            auto memoryNode = dynamic_cast<node::MemoryInput*>(node.get());
+            auto memoryNode = std::dynamic_pointer_cast<node::MemoryInput>(node);
             if (!memoryNode) {
                 IE_THROW() << "Cannot cast " << node->getName() << " to MemoryInput";
             }
-            auto state_store = memoryNode->getStore();
-            auto state_name = memoryNode->getId();
 
-            // Remove suffix with pair ID. Internal information.
-            auto suffix_idx = state_name.find("/id=");
-            if (suffix_idx != std::string::npos)
-                state_name = state_name.substr(0, suffix_idx);
-
-            memoryStates.emplace_back(new VariableState(state_name, state_store));
+            memoryStates.emplace_back(memoryNode->makeState());
         }
     }
 }
@@ -95,48 +88,26 @@ void InferRequestBase::pushInput(const std::string& inputName, InferenceEngine::
     graph->PushInputData(inputName, needConvert ? iconv : inputBlob);
 }
 
-void InferRequestBase::PushStates() {
+// state -> node
+void InferRequestBase::AssignStates() {
     for (auto &node : graph->GetNodes()) {
         if (node->getType() == Type::MemoryInput) {
-            auto cur_node = dynamic_cast<node::MemoryInput*>(node.get());
+            auto cur_node = std::dynamic_pointer_cast<node::MemoryInput>(node);
             if (!cur_node) {
                 IE_THROW() << "Cannot cast " << node->getName() << " to MemoryInput";
             }
             auto cur_id = cur_node->getId();
             for (const auto& state : memoryStates) {
                 if (state->GetName() == cur_id) {
-                    auto cur_state_mem = cur_node->getStore();
-                    auto data_ptr = state->GetState()->cbuffer().as<void*>();
-                    auto data_size = state->GetState()->byteSize();
-                    auto cur_state_mem_buf = static_cast<uint8_t*>(cur_state_mem->getData());
-
-                    cpu_memcpy(cur_state_mem_buf, data_ptr, data_size);
+                    cur_node->assignState(state);
                 }
             }
         }
     }
 }
 
-void InferRequestBase::PullStates() {
-    for (auto &node : graph->GetNodes()) {
-        if (node->getType() == Type::MemoryInput) {
-            auto cur_node = dynamic_cast<node::MemoryInput*>(node.get());
-            if (!cur_node) {
-                IE_THROW() << "Cannot cast " << node->getName() << " to MemoryInput";
-            }
-            auto cur_id = cur_node->getId();
-            for (const auto& state : memoryStates) {
-                if (state->GetName() == cur_id) {
-                    auto cur_state_mem = cur_node->getStore();
-                    auto data_ptr = state->GetState()->cbuffer().as<void*>();
-                    auto data_size = state->GetState()->byteSize();
-                    auto cur_state_mem_buf = static_cast<uint8_t*>(cur_state_mem->getData());
-
-                    cpu_memcpy(data_ptr, cur_state_mem_buf, data_size);
-                }
-            }
-        }
-    }
+void InferRequestBase::CommitStates() {
+    std::for_each(memoryStates.begin(), memoryStates.end(), [](const MemStatePtr& state) { state->Commit(); });
 }
 
 void InferRequestBase::redefineMemoryForInputNodes() {
@@ -173,15 +144,12 @@ void InferRequestBase::InferImpl() {
 
     PushInputData();
 
-    if (memoryStates.size() != 0) {
-        PushStates();
+    // state -> node
+    if (!memoryStates.empty()) {
+        AssignStates();
     }
 
     graph->Infer(this);
-
-    if (memoryStates.size() != 0) {
-        PullStates();
-    }
 
     ThrowIfCanceled();
 
@@ -190,6 +158,10 @@ void InferRequestBase::InferImpl() {
         for (auto&& item : outputControlBlocks) {
             item.second.update();
         }
+    }
+
+    if (!memoryStates.empty()) {
+        CommitStates();
     }
 
     graph->PullOutputData(_outputs);
@@ -340,7 +312,7 @@ void InferRequestBase::changeDefaultPtr() {
                     controlBlock.nextMemMngr() : // then swap internal buffer to avoid data corruption
                     controlBlock.currentMemMngr(); // else reuse the existing buffer
 
-                outputMemMngr->setMemMngr(memMngr);
+                outputMemMngr->setMemMngrResize(memMngr);
                 DEBUG_LOG("reset proxy ", outputMemMngr, ", actual ", controlBlock.currentMemMngr(), " graph ", graph, " inferrequest ", this);
                 DEBUG_LOG(name, ", blob ", controlBlock.blob(), ", tensor ", controlBlock.tensor());
             } else {
@@ -351,7 +323,7 @@ void InferRequestBase::changeDefaultPtr() {
 }
 
 std::vector<InferenceEngine::IVariableStateInternal::Ptr> InferRequestBase::QueryState() {
-    return memoryStates;
+    return {memoryStates.begin(), memoryStates.end()};
 }
 
 void InferRequestBase::SetAsyncRequest(AsyncInferRequest* asyncRequest) {
