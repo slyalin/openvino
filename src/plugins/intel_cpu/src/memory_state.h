@@ -23,7 +23,7 @@ public:
 
     virtual MemoryPtr InputMem() = 0;
     virtual MemoryPtr OutputMem() = 0;
-    virtual MemoryDescPtr OriginalDesc() const = 0;
+    virtual MemoryDescPtr InternalDesc() const = 0;
 };
 
 class VariableStateDoubleBuffer : public IVariableState {
@@ -33,6 +33,7 @@ public:
 public:
     VariableStateDoubleBuffer(std::string name,
                               const MemBuilder& mem_build,
+                              MemoryDescPtr external_desc,
                               MemoryCPtr init_val);
     //InferenceEngine::IVariableStateInternal
     void Reset() override;
@@ -44,7 +45,7 @@ public:
 
     MemoryPtr InputMem() override;
     MemoryPtr OutputMem() override;
-    MemoryDescPtr OriginalDesc() const override;
+    MemoryDescPtr InternalDesc() const override;
 
 private:
     static MemoryDescPtr ToStatic(const MemoryDescPtr& desc);
@@ -65,8 +66,12 @@ private:
         return m_internal_mem[buffer_num ^ 0x1];
     }
 
+
+    const dnnl::engine& getEngine() const;
+
 private:
-    MemoryDescPtr m_desc; //mem desc required by the graph internal tensor
+    MemoryDescPtr m_external_desc;
+    MemoryDescPtr m_internal_desc; //mem desc required by the graph internal tensor
     std::array<MemoryPtr, 2> m_internal_mem{};
     size_t buffer_num = 0;
 };
