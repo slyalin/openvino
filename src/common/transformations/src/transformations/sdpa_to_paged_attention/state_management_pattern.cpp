@@ -128,9 +128,7 @@ ov::pass::StateManagementPattern::StateManagementPattern(ParameterVector& kv_par
                                           &sliding_window,
                                           &parameters_to_remove,
                                           &assignes_to_remove,
-                                          &layer_index,
-                                          &k_heads_unsqueeze,
-                                          &v_heads_unsqueeze](ov::pass::pattern::Matcher& m) {
+                                          &layer_index](ov::pass::pattern::Matcher& m) {
         const auto& pattern_map = m.get_pattern_value_map();
         if (pattern_map.find(sdpa) == pattern_map.end()) {
             return false;
@@ -162,7 +160,7 @@ ov::pass::StateManagementPattern::StateManagementPattern(ParameterVector& kv_par
         auto Ev = sdpa_node->get_input_tensor(2).get_partial_shape()[-1]; // in common case may not match E
         auto num_q_heads = sdpa_node->get_input_tensor(0).get_partial_shape()[-3];
 
-        auto extract_num_kv_heads = [=, &pattern_map](std::shared_ptr<Node>& unsqueeze) {
+        auto extract_num_kv_heads = [=, &pattern_map](std::shared_ptr<Node> unsqueeze) {
             // Deduce number of k/v heads from Unsqueeze-Broadcast-Reshape (if present) pattern that appears in case of MQA/GQA
             if (pattern_map.find(unsqueeze) != pattern_map.end()) {
                 // based on unsqueeze index determine the dimension that will be broadcased
@@ -179,7 +177,7 @@ ov::pass::StateManagementPattern::StateManagementPattern(ParameterVector& kv_par
                 if (!constant) {
                     return ov::Dimension();
                 }
-                auto data = constant->get_vector<int64_t>(); //hope it's correct here ??
+                auto data = constant->cast_vector<int64_t>(); //hope it's correct here ??
                 if (data.size() != 1) { // it should be only one axis
                     return ov::Dimension();
                 }
