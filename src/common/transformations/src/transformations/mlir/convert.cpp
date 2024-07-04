@@ -7,6 +7,9 @@
 #include <algorithm>
 #include <functional>
 #include <openvino/op/add.hpp>
+#include <openvino/op/divide.hpp>
+#include <openvino/op/multiply.hpp>
+#include <openvino/op/subtract.hpp>
 #include <openvino/pass/graph_rewrite.hpp>
 #include <openvino/pass/manager.hpp>
 #include <openvino/pass/pattern/op/wrap_type.hpp>
@@ -586,7 +589,11 @@ struct ConvertBinary {
 };
 
 const std::map<ov::DiscreteTypeInfo, ConversionContext::Convertor> ConversionContext::convertors = {
-    {ov::op::v1::Add::get_type_info_static(), Convertor(ConvertBinary<linalg::AddOp>())}};
+    {ov::op::v1::Add::get_type_info_static(), Convertor(ConvertBinary<linalg::AddOp>())},
+    {ov::op::v1::Subtract::get_type_info_static(), Convertor(ConvertBinary<linalg::SubOp>())},
+    {ov::op::v1::Multiply::get_type_info_static(), Convertor(ConvertBinary<linalg::MulOp>())},
+    {ov::op::v1::Divide::get_type_info_static(), Convertor(ConvertBinary<linalg::DivOp>())}
+    };
 
 mlir::OwningOpRef<mlir::ModuleOp> ngraph_to_mlir(MLIRContext* context,
                                                  const ov::OutputVector& inputs,
@@ -646,38 +653,59 @@ mlir::OwningOpRef<mlir::ModuleOp> ngraph_to_mlir(MLIRContext* context,
     return module;
 }
 
-class AddLowering : public ov::pass::MatcherPass {
+class BinaryLowering : public ov::pass::MatcherPass {
 public:
-    OPENVINO_RTTI("AddLowering", "0");
-    explicit AddLowering(mlir::MLIRContext* context) {
-        auto pattern = ov::pass::pattern::wrap_type<ov::op::v1::Add>(
-            {ov::pass::pattern::any_input(), ov::pass::pattern::any_input()});
+    OPENVINO_RTTI("BinaryLowering", "0");
+    explicit BinaryLowering(mlir::MLIRContext* context) {
+        std::vector<std::pair<std::string, std::shared_ptr<ov::Node>>> patterns = {
+            {
+                "AddLowering", 
+                ov::pass::pattern::wrap_type<ov::op::v1::Add>(
+                    {ov::pass::pattern::any_input(), ov::pass::pattern::any_input()})
+            },
+            {
+                "SubLowering", 
+                ov::pass::pattern::wrap_type<ov::op::v1::Subtract>(
+                    {ov::pass::pattern::any_input(), ov::pass::pattern::any_input()})
+            },
+            {
+                "MulLowering", 
+                ov::pass::pattern::wrap_type<ov::op::v1::Multiply>(
+                    {ov::pass::pattern::any_input(), ov::pass::pattern::any_input()})
+            },
+            {
+                "DivLowering", 
+                ov::pass::pattern::wrap_type<ov::op::v1::Divide>(
+                    {ov::pass::pattern::any_input(), ov::pass::pattern::any_input()})
+            }};
 
         auto callback = [=, context](ov::pass::pattern::Matcher& m) {
-            std::cout << "[ INFO ] Matched AddLowering\n";
-            auto add = m.get_match_root();
+            std::cout << "[ INFO ] Matched BinaryLowering\n";
+            auto binop = m.get_match_root();
 
             mlir::OwningOpRef<mlir::ModuleOp> module;
 
             // FIXME: Suppose no broadcast
-            module = ngraph_to_mlir(context, add->input_values(), {add}, add->outputs());
+            module = ngraph_to_mlir(context, binop->input_values(), {binop}, binop->outputs());
 
-            auto expected_outputs = add->outputs();
+            auto expected_outputs = binop->outputs();
             OVOutputTypes output_types;
             for (size_t i = 0; i < expected_outputs.size(); ++i) {
                 output_types.push_back(
                     std::make_tuple(expected_outputs[i].get_element_type(), expected_outputs[i].get_partial_shape()));
             }
-            auto replacement = std::make_shared<MLIROp>(add->input_values(),
+            auto replacement = std::make_shared<MLIROp>(binop->input_values(),
                                                         std::make_shared<MLIREvaluate>(std::move(module)),
                                                         output_types);
 
-            replace_node(add, replacement);
+            replace_node(binop, replacement);
             return true;
         };
 
-        auto m = std::make_shared<ov::pass::pattern::Matcher>(pattern, "AddLowering");
-        register_matcher(m, callback);
+        for (auto [name, pattern]: patterns) {
+            auto m = std::make_shared<ov::pass::pattern::Matcher>(pattern, name);
+            register_matcher(m, callback);
+        }
     }
 };
 
@@ -685,7 +713,7 @@ public:
 void injectMLIR(std::shared_ptr<ov::Model> model, MLIRContext* context) {
     ov::pass::Manager manager;
     manager.set_per_pass_validation(true);
-    manager.register_pass<AddLowering>(context);
+    manager.register_pass<BinaryLowering>(context);
     manager.run_passes(model);
 }
 
