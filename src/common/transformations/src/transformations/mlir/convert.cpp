@@ -55,8 +55,13 @@
 #include "openvino/core/rt_info.hpp"
 #include "openvino/pass/pattern/op/wrap_type.hpp"
 #include "transformations_visibility.hpp"
+#include "openvino/core/symbol.hpp"
 
 using namespace mlir;
+
+using NodePtr = std::shared_ptr<ov::Node>;
+using SymbolPtr = std::shared_ptr<ov::Symbol>;
+
 
 
 static void prepareMLIRKernelWithoutWrapper(mlir::OwningOpRef<mlir::ModuleOp>& module) {
@@ -298,7 +303,7 @@ public:
         }
     }
 
-    std::shared_ptr<ov::Node> clone_with_new_inputs(const ov::OutputVector& new_args) const override {
+    NodePtr clone_with_new_inputs(const ov::OutputVector& new_args) const override {
         return std::make_shared<MLIROp>(new_args, engine, output_types);
     }
 
@@ -463,7 +468,7 @@ mlir::RankedTensorType importTensor(mlir::MLIRContext* ctx,
     return mlir::RankedTensorType::get(ArrayRef(importShape(shape)), importPrecision(ctx, elemType));
 }
 
-mlir::Location createLocation(mlir::MLIRContext* ctx, std::shared_ptr<ov::Node> node) {
+mlir::Location createLocation(mlir::MLIRContext* ctx, NodePtr node) {
     return createLayerLocation(ctx, node->get_friendly_name(), node->get_type_name());
 }
 
@@ -516,7 +521,7 @@ SmallVector<mlir::Type> get_types_for_values(mlir::MLIRContext* context, const o
 
 class ConversionContext {
 public:
-    using Convertor = std::function<void(ConversionContext&, std::shared_ptr<ov::Node>)>;
+    using Convertor = std::function<void(ConversionContext&, NodePtr)>;
     using NodeOutputMap = std::unordered_map<ov::Output<ov::Node>, mlir::Value>;
 
     static const std::map<ov::DiscreteTypeInfo, Convertor> convertors;
@@ -528,7 +533,7 @@ public:
         : context(context),
           block_builder(block_builder) {}
 
-    SmallVector<mlir::Value> getInputs(std::shared_ptr<ov::Node> node) {
+    SmallVector<mlir::Value> getInputs(NodePtr node) {
         SmallVector<mlir::Value> out;
         out.reserve(node->get_input_size());
         for (const auto& input : node->inputs()) {
@@ -537,7 +542,7 @@ public:
         return out;
     }
 
-    void addOutputs(std::shared_ptr<ov::Node> node, mlir::Operation* op) {
+    void addOutputs(NodePtr node, mlir::Operation* op) {
         const auto results = op->getOpResults();
 
         OPENVINO_ASSERT(
@@ -556,14 +561,14 @@ public:
         return *block_builder;
     }
 
-    void convert(std::shared_ptr<ov::Node> node) {
+    void convert(NodePtr node) {
         convertors.at(node->get_type_info())(*this, node);
     }
 };
 
 template <typename TargetOp>
 struct ConvertBinary {
-    void operator()(ConversionContext& context, std::shared_ptr<ov::Node> node) {
+    void operator()(ConversionContext& context, NodePtr node) {
         auto loc = createLocation(context.context, node);
         auto& builder = context.builder();
         // TODO: Support broadcasts
@@ -646,10 +651,154 @@ mlir::OwningOpRef<mlir::ModuleOp> ngraph_to_mlir(MLIRContext* context,
     return module;
 }
 
-class AddLowering : public ov::pass::MatcherPass {
+
+struct Subgraph {
+    //ov::Symbol id;
+    ov::NodeVector nodes;
+    //ov::OutputVector inputs;
+    //ov::InputVector inputs;
+
+    // Consumes other subgraph
+    void merge (Subgraph& other) {
+        nodes.insert(nodes.end(), other.nodes.begin(), other.nodes.end());
+    }
+};
+
+
+using SubgraphPtr = std::shared_ptr<Subgraph>;
+using SubgraphID = SymbolPtr;
+
+
+class SubgraphTracker {
+public:
+
+    // callback to finalize the subgraph when it is terminated
+    using Finalizer = std::function<void(SubgraphPtr)>;
+
+    void add_node (NodePtr node, bool belongs, Finalizer finalizer) {
+        // collect all subgraph ids that input nodes belong to and all dependencies
+        Dependencies input_subgraphs;
+        Dependencies input_dependencies;
+        for(auto input_value: node->input_values()) {
+            auto node = input_value.get_node_shared_ptr();
+            if(auto id = get_subgraph_id(node)) {
+                input_subgraphs.insert(ov::symbol::ancestor_of(id));
+            }
+            const auto& deps = get_dependencies(node);
+            for(auto dep: deps) {
+                input_dependencies.insert(ov::symbol::ancestor_of(dep));
+            }
+        }
+
+        if(belongs) {
+            // Below we refuse to merge subgraphs if all of them cannot merge to a single subgraph, this is rough because
+            // there are cases when part of the input subgraphs can consume the node and others will come as inputs -- TODO.
+            // TODO: leave only those input subgraphs that are not conflicting with other subgraphs nor with any dependencies
+            if(input_subgraphs.empty() || intersected(input_subgraphs, input_dependencies)) {   // no input subgraphs || cannot merge all due to cycles
+                try_terminate_subgraphs(input_subgraphs, finalizer);
+
+                // start a new subgraph
+                auto subgraph_id = new_subgraph();
+                add_node_to_subgraph(node, subgraph_id);
+                set_subgraph_id(node, subgraph_id);
+                input_dependencies.insert(input_subgraphs.begin(), input_subgraphs.end());
+            } else {
+                auto merged_subgraph_id = std::accumulate(
+                    input_subgraphs.begin(),
+                    input_subgraphs.end(),
+                    *input_subgraphs.begin(),
+                    [this](SubgraphID a, SubgraphID b) {
+                        merge_subgraphs(a, b);
+                        return a;
+                    }
+                );
+                set_subgraph_id(node, merged_subgraph_id);
+            }
+
+        } else {
+            try_terminate_subgraphs(input_subgraphs, finalizer);
+            set_subgraph_id(node, nullptr);
+            input_dependencies.insert(input_subgraphs.begin(), input_subgraphs.end());
+        }
+        set_dependencies(node, input_dependencies);
+    }
+
+private:
+
+    std::unordered_map<SubgraphID, SubgraphPtr> m_subgraphs;
+    using Dependencies = std::unordered_set<SubgraphID>;
+
+    // // Detects if `node` depends on a node from `subgraph` but goes via node that doesn't belongs to `subgraph`
+    // bool depends_via_break (NodePtr node, const Subgraph& subgraph);
+
+    SubgraphID new_subgraph() {
+        SubgraphID id;
+        m_subgraphs[id] = std::make_shared<Subgraph>();
+        return id;
+    }
+
+    void add_node_to_subgraph(NodePtr node, SubgraphID id) {
+        get_subgraph(id)->nodes.push_back(node);
+    }
+
+    void merge_subgraphs(SubgraphID id1, SubgraphID id2) {
+        id1 = ov::symbol::ancestor_of(id1);
+        id2 = ov::symbol::ancestor_of(id2);
+        if (id1 == id2) return;
+
+        auto subgraph1 = get_subgraph(id1);
+        auto subgraph2 = get_subgraph(id2);
+        subgraph1->merge(*subgraph2);
+        m_subgraphs.erase(id1);
+        m_subgraphs.erase(id2);
+        ov::symbol::set_equal(id1, id2);
+        id1 = ov::symbol::ancestor_of(id1);
+        m_subgraphs[id1] = subgraph1;
+    }
+
+    SubgraphPtr get_subgraph(SubgraphID id) {
+        return m_subgraphs.at(ov::symbol::ancestor_of(id));
+    }
+
+    // set/get all subgraph ids that contribute to a given node
+
+    const Dependencies& get_dependencies(NodePtr node) {
+        return node->get_rt_info().at("__subgraph_dependencies").as<Dependencies>();
+    }
+    void set_dependencies(NodePtr node, const Dependencies& dependencies) {
+        node->get_rt_info()["__subgraph_dependencies"] = dependencies;
+    }
+
+    // set/get subgraph id that a give node belongs to
+
+    SubgraphID get_subgraph_id(NodePtr node) {
+        return node->get_rt_info().at("__subgraph_id").as<SubgraphID>();
+    }
+
+    void set_subgraph_id(NodePtr node, SubgraphID id) {
+        node->get_rt_info()["__subgraph_id"] = id;
+    }
+
+    bool intersected(const Dependencies& a, const Dependencies& b) {
+        for(const auto& x: a) {
+            if(b.count(x))
+                return true;
+        }
+        return false;
+    }
+
+    // TODO: try to merge subgraphs if they are being terminated
+    void try_terminate_subgraphs(const Dependencies& subgraphs, Finalizer finalizer) {
+        std::cerr << "[ DEBUG ] try_terminate_subgraphs\n";
+    }
+
+};
+
+// This pass find marked with a special flag group of nodes and collapse each group to a single MLIR function
+class MarkedLowering : public ov::pass::MatcherPass {
 public:
     OPENVINO_RTTI("AddLowering", "0");
-    explicit AddLowering(mlir::MLIRContext* context) {
+    explicit MarkedLowering(mlir::MLIRContext* context) {
         auto pattern = ov::pass::pattern::wrap_type<ov::op::v1::Add>(
             {ov::pass::pattern::any_input(), ov::pass::pattern::any_input()});
 
@@ -682,10 +831,43 @@ public:
 };
 
 
+const std::string& subgraph_mark() {
+    static const std::string mark = "__subgraph_mlir_mark";
+    return mark;
+}
+
+void set_subgraph_mark(NodePtr node) {
+    node->get_rt_info()[subgraph_mark()];
+}
+
+bool get_subgraph_mark(NodePtr node) {
+    return node->get_rt_info().count(subgraph_mark());
+}
+
+class MarkPattern : public ov::pass::MatcherPass {
+public:
+    OPENVINO_RTTI("MarkPattern", "0");
+    MarkPattern(NodePtr pattern) {
+        auto callback = [](ov::pass::pattern::Matcher& m) {
+            // TODO: support multi-node patterns marking
+            auto node = m.get_match_root();
+            set_subgraph_mark(node);
+            return true;
+        };
+
+        auto m = std::make_shared<ov::pass::pattern::Matcher>(pattern, "MarkPattern");
+        register_matcher(m, callback);
+    }
+};
+
+
 void injectMLIR(std::shared_ptr<ov::Model> model, MLIRContext* context) {
     ov::pass::Manager manager;
+    using namespace ov::pass::pattern;
+    using namespace ov::op;
     manager.set_per_pass_validation(true);
-    manager.register_pass<AddLowering>(context);
+    //manager.register_pass<AddLowering>(context);
+    manager.register_pass<MarkPattern>(wrap_type<v1::Add>({any_input(), any_input()}));
     manager.run_passes(model);
 }
 
