@@ -664,7 +664,6 @@ using InputVector = std::vector<ov::Input<ov::Node>>;
 
 
 struct Subgraph {
-    //ov::Symbol id;
     ov::NodeVector nodes;
     ov::OutputVector inputs;
     ov::OutputVector outputs;
@@ -814,7 +813,6 @@ private:
     }
 
     void terminate_subgraph(SubgraphID id) {
-        std::cerr << "[ DEBUG ] terminate_subgraph\n";
         id = ov::symbol::ancestor_of(id);
         auto subgraph = get_subgraph(id);
         // Build subgraph inputs and outputs
@@ -845,13 +843,12 @@ private:
             }
         }
         subgraph->inputs.assign(inputs.begin(), inputs.end());
-        //subgraph->outputs.assign(outputs.begin(), outputs.end());
         m_finalizer(subgraph);
     }
 
-    // TODO: try to merge subgraphs if they are being terminated
     void try_terminate_subgraphs(const Dependencies& subgraphs, NodePtr terminator) {
-        std::cerr << "[ DEBUG ] try_terminate_subgraphs\n";
+        // TODO: Terminate subgraphs earlier when all terminating nodes are known
+        // TODO: try to merge subgraphs if they are being terminated simultaniously
     }
 };
 
@@ -860,7 +857,6 @@ NodePtr ngraph_to_mlir_op(MLIRContext* context, SubgraphPtr subgraph) {
 
     mlir::OwningOpRef<mlir::ModuleOp> module;
 
-    // FIXME: Suppose no broadcast
     module = ngraph_to_mlir(context, subgraph->inputs, subgraph->nodes, subgraph->outputs);
 
     OVOutputTypes output_types;
@@ -927,24 +923,12 @@ public:
 
     bool run_on_model(const std::shared_ptr<ov::Model>& model) override {
         SubgraphTracker tracker([this](SubgraphPtr subgraph) {
-                std::cerr << "[ DEBUG ] New subgraph consisting of " << subgraph->nodes.size() << " nodes\n";
-                for(auto node: subgraph->nodes) {
-                    std::cerr << "    node: " << node << "\n";
-                }
-                for(auto input: subgraph->inputs) {
-                    std::cerr << "    input: " << input << "\n";
-                }
-                for(auto output: subgraph->outputs) {
-                    std::cerr << "    output: " << output << "\n";
-                }
-
                 auto mlir_op = ngraph_to_mlir_op(context, subgraph);
                 replace_subgraph(subgraph, mlir_op);
                 std::cerr << "Created MLIR op: " << mlir_op << "\n";
             }
         );
         for(auto node: model->get_ordered_ops()) {
-            std::cerr << "[ DEBUG ] " << (get_subgraph_mark(node) ? "enabled" : "disabled") << " node " << node << "\n";
             tracker.add_node(node, get_subgraph_mark(node));
         }
         tracker.finalize();
@@ -952,36 +936,39 @@ public:
 };
 
 
+bool elementwise_f32_binary_no_broadcast_predicate(const ov::Output<ov::Node>& output) {
+    if(output.get_element_type() != ov::element::f32) {
+        return false;
+    }
+    // Check if implicit broadcast is possible, reject in this case
+    // Relies on symbolic information -- register SymbolicPropagation before applying this pattern
+    auto input_shape_a = output.get_node_shared_ptr()->get_input_partial_shape(0);
+    auto input_shape_b = output.get_node_shared_ptr()->get_input_partial_shape(1);
+    auto output_shape = output.get_partial_shape();
+    if(output_shape.rank().is_dynamic() || input_shape_a.rank().is_dynamic() || input_shape_b.rank().is_dynamic()) {
+        return false;
+    }
+    if(output_shape.rank().get_length() != input_shape_a.rank().get_length() || output_shape.rank().get_length() != input_shape_b.rank().get_length()) {
+        return false;
+    }
+
+    for(size_t i = 0; i < output_shape.size(); ++i) {
+        if(output_shape[i] != input_shape_a[i] || output_shape[i] != input_shape_b[i]) {
+            return false;
+        }
+        if(!ov::symbol::are_equal(output_shape[i].get_symbol(), input_shape_a[i].get_symbol()) || !ov::symbol::are_equal(output_shape[i].get_symbol(), input_shape_b[i].get_symbol())) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
 template <typename Op>
 NodePtr elementwise_f32_binary_no_broadcast() {
     using namespace ov::pass::pattern;
-    return wrap_type<Op>({any_input(), any_input()}, [](const ov::Output<ov::Node>& output) {
-        if(output.get_element_type() != ov::element::f32) {
-            return false;
-        }
-        // Check if implicit broadcast is possible, reject in this case
-        // Relies on symbolic information -- register SymbolicPropagation before applying this pattern
-        auto input_shape_a = output.get_node_shared_ptr()->get_input_partial_shape(0);
-        auto input_shape_b = output.get_node_shared_ptr()->get_input_partial_shape(1);
-        auto output_shape = output.get_partial_shape();
-        if(output_shape.rank().is_dynamic() || input_shape_a.rank().is_dynamic() || input_shape_b.rank().is_dynamic()) {
-            return false;
-        }
-        if(output_shape.rank().get_length() != input_shape_a.rank().get_length() || output_shape.rank().get_length() != input_shape_b.rank().get_length()) {
-            return false;
-        }
-
-        for(size_t i = 0; i < output_shape.size(); ++i) {
-            if(output_shape[i] != input_shape_a[i] || output_shape[i] != input_shape_b[i]) {
-                return false;
-            }
-            if(!ov::symbol::are_equal(output_shape[i].get_symbol(), input_shape_a[i].get_symbol()) || !ov::symbol::are_equal(output_shape[i].get_symbol(), input_shape_b[i].get_symbol())) {
-                return false;
-            }
-        }
-
-        return true;
-    });
+    return wrap_type<Op>({any_input(), any_input()}, elementwise_f32_binary_no_broadcast_predicate);
 }
 
 
