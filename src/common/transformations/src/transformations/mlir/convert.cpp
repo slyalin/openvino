@@ -63,6 +63,8 @@
 
 #include "transformations/symbolic_transformations/symbolic_optimizations.hpp"
 
+namespace {
+
 using namespace mlir;
 
 using NodePtr = std::shared_ptr<ov::Node>;
@@ -70,7 +72,7 @@ using SymbolPtr = std::shared_ptr<ov::Symbol>;
 
 
 
-static void prepareMLIRKernelWithoutWrapper(mlir::OwningOpRef<mlir::ModuleOp>& module) {
+void prepareMLIRKernelWithoutWrapper(mlir::OwningOpRef<mlir::ModuleOp>& module) {
     // A set of default passes that lower any input IR to LLVM
     PassManager pm(module->getContext());
 
@@ -132,7 +134,7 @@ static void prepareMLIRKernelWithoutWrapper(mlir::OwningOpRef<mlir::ModuleOp>& m
     }
 }
 
-static std::unique_ptr<llvm::Module> lowerToLLVMIR(Operation* module, llvm::LLVMContext& llvmContext) {
+std::unique_ptr<llvm::Module> lowerToLLVMIR(Operation* module, llvm::LLVMContext& llvmContext) {
     // Default lowering for mlir-cpu-runner
     auto llvmModule = translateModuleToLLVMIR(module, llvmContext);
     assert(llvmModule);
@@ -288,7 +290,7 @@ public:
 
 typedef std::vector<std::tuple<ov::element::Type, ov::PartialShape>> OVOutputTypes;
 
-class OPENVINO_API MLIROp : public ov::op::Op {
+class MLIROp : public ov::op::Op {
     std::shared_ptr<MLIREvaluate> engine;
     OVOutputTypes output_types;
 
@@ -338,7 +340,7 @@ public:
     }
 };
 
-static mlir::Location createLayerLocation(mlir::MLIRContext* ctx, const std::string& layerName, const std::string& layerType) {
+mlir::Location createLayerLocation(mlir::MLIRContext* ctx, const std::string& layerName, const std::string& layerType) {
     const auto layerNameAttr = mlir::StringAttr::get(ctx, layerName);
     const auto nameLoc = mlir::NameLoc::get(layerNameAttr);
 
@@ -350,7 +352,7 @@ static mlir::Location createLayerLocation(mlir::MLIRContext* ctx, const std::str
     return mlir::FusedLoc::get(ctx, {nameLoc}, metadata);
 }
 
-static SmallVector<int64_t> importShape(const ov::PartialShape& shape) {
+SmallVector<int64_t> importShape(const ov::PartialShape& shape) {
     SmallVector<int64_t> out(shape.rank().get_length());
     // TODO: Add support for dynamically ranked shapes
     for (size_t i = 0; i < out.size(); ++i) {
@@ -360,76 +362,76 @@ static SmallVector<int64_t> importShape(const ov::PartialShape& shape) {
     return out;
 }
 
-static mlir::IntegerType getInt1Type(mlir::MLIRContext* ctx) {
+mlir::IntegerType getInt1Type(mlir::MLIRContext* ctx) {
     return mlir::IntegerType::get(ctx, 1);
 }
 
-static mlir::IntegerType getInt4Type(mlir::MLIRContext* ctx) {
+mlir::IntegerType getInt4Type(mlir::MLIRContext* ctx) {
     return mlir::IntegerType::get(ctx, 4);
 }
 
-static mlir::IntegerType getInt8Type(mlir::MLIRContext* ctx) {
+mlir::IntegerType getInt8Type(mlir::MLIRContext* ctx) {
     return mlir::IntegerType::get(ctx, 8);
 }
 
-static mlir::IntegerType getInt16Type(mlir::MLIRContext* ctx) {
+mlir::IntegerType getInt16Type(mlir::MLIRContext* ctx) {
     return mlir::IntegerType::get(ctx, 16);
 }
 
-static mlir::IntegerType getInt32Type(mlir::MLIRContext* ctx) {
+mlir::IntegerType getInt32Type(mlir::MLIRContext* ctx) {
     return mlir::IntegerType::get(ctx, 32);
 }
 
-static mlir::IntegerType getInt64Type(mlir::MLIRContext* ctx) {
+mlir::IntegerType getInt64Type(mlir::MLIRContext* ctx) {
     return mlir::IntegerType::get(ctx, 64);
 }
 
-static mlir::IntegerType getSInt4Type(mlir::MLIRContext* ctx) {
+mlir::IntegerType getSInt4Type(mlir::MLIRContext* ctx) {
     return mlir::IntegerType::get(ctx, 4, mlir::IntegerType::Signed);
 }
 
-static mlir::IntegerType getSInt8Type(mlir::MLIRContext* ctx) {
+mlir::IntegerType getSInt8Type(mlir::MLIRContext* ctx) {
     return mlir::IntegerType::get(ctx, 8, mlir::IntegerType::Signed);
 }
 
-static mlir::IntegerType getSInt16Type(mlir::MLIRContext* ctx) {
+mlir::IntegerType getSInt16Type(mlir::MLIRContext* ctx) {
     return mlir::IntegerType::get(ctx, 16, mlir::IntegerType::Signed);
 }
 
-static mlir::IntegerType getSInt32Type(mlir::MLIRContext* ctx) {
+mlir::IntegerType getSInt32Type(mlir::MLIRContext* ctx) {
     return mlir::IntegerType::get(ctx, 32, mlir::IntegerType::Signed);
 }
 
-static mlir::IntegerType getSInt64Type(mlir::MLIRContext* ctx) {
+mlir::IntegerType getSInt64Type(mlir::MLIRContext* ctx) {
     return mlir::IntegerType::get(ctx, 64, mlir::IntegerType::Signed);
 }
 
-static mlir::IntegerType getUInt4Type(mlir::MLIRContext* ctx) {
+mlir::IntegerType getUInt4Type(mlir::MLIRContext* ctx) {
     return mlir::IntegerType::get(ctx, 4, mlir::IntegerType::Unsigned);
 }
 
-static mlir::IntegerType getUInt8Type(mlir::MLIRContext* ctx) {
+mlir::IntegerType getUInt8Type(mlir::MLIRContext* ctx) {
     return mlir::IntegerType::get(ctx, 8, mlir::IntegerType::Unsigned);
 }
 
-static mlir::IntegerType getUInt16Type(mlir::MLIRContext* ctx) {
+mlir::IntegerType getUInt16Type(mlir::MLIRContext* ctx) {
     return mlir::IntegerType::get(ctx, 16, mlir::IntegerType::Unsigned);
 }
 
-static mlir::IntegerType getUInt32Type(mlir::MLIRContext* ctx) {
+mlir::IntegerType getUInt32Type(mlir::MLIRContext* ctx) {
     return mlir::IntegerType::get(ctx, 32, mlir::IntegerType::Unsigned);
 }
 
-static mlir::IntegerType getUInt64Type(mlir::MLIRContext* ctx) {
+mlir::IntegerType getUInt64Type(mlir::MLIRContext* ctx) {
     return mlir::IntegerType::get(ctx, 64, mlir::IntegerType::Unsigned);
 }
 
-static mlir::IntegerType getBool8Type(mlir::MLIRContext* ctx) {
+mlir::IntegerType getBool8Type(mlir::MLIRContext* ctx) {
     // Signless 8-bit integer use for BOOL, to distinguish it from U8
     return mlir::IntegerType::get(ctx, 8, mlir::IntegerType::Signless);
 }
 
-static mlir::Type importPrecision(mlir::MLIRContext* ctx, const ov::element::Type& precision) {
+mlir::Type importPrecision(mlir::MLIRContext* ctx, const ov::element::Type& precision) {
     switch (precision) {
     case ov::element::Type_t::f64:
         return mlir::Float64Type::get(ctx);
@@ -466,15 +468,18 @@ static mlir::Type importPrecision(mlir::MLIRContext* ctx, const ov::element::Typ
     }
 }
 
-static mlir::RankedTensorType importTensor(mlir::MLIRContext* ctx,
+mlir::RankedTensorType importTensor(mlir::MLIRContext* ctx,
                                     const ov::PartialShape& shape,
                                     const ov::element::Type& elemType) {
     return mlir::RankedTensorType::get(ArrayRef(importShape(shape)), importPrecision(ctx, elemType));
 }
 
-static mlir::Location createLocation(mlir::MLIRContext* ctx, NodePtr node) {
+mlir::Location createLocation(mlir::MLIRContext* ctx, NodePtr node) {
     return createLayerLocation(ctx, node->get_friendly_name(), node->get_type_name());
 }
+
+} // namespace
+
 
 namespace std {
 
@@ -497,14 +502,16 @@ struct hash<ov::Output<ov::Node>> final {
 }  // namespace std
 
 
-static MemRefType convertTensorToMemRef(TensorType tensorType) {
+namespace {
+
+MemRefType convertTensorToMemRef(TensorType tensorType) {
     ArrayRef<int64_t> shape = tensorType.getShape();
     Type elementType = tensorType.getElementType();
     return MemRefType::get(shape, elementType);
 }
 
 
-static SmallVector<mlir::Type> tensorsToMemRefs(SmallVector<mlir::Type> tensors) {
+SmallVector<mlir::Type> tensorsToMemRefs(SmallVector<mlir::Type> tensors) {
     SmallVector<mlir::Type> out;
     out.reserve(tensors.size());
     for (const auto& tensor : tensors) {
@@ -514,7 +521,7 @@ static SmallVector<mlir::Type> tensorsToMemRefs(SmallVector<mlir::Type> tensors)
 }
 
 
-static SmallVector<mlir::Type> get_types_for_values(mlir::MLIRContext* context, const ov::OutputVector& values) {
+SmallVector<mlir::Type> get_types_for_values(mlir::MLIRContext* context, const ov::OutputVector& values) {
     SmallVector<mlir::Type> types;
     types.reserve(values.size());
     for (const auto& output : values) {
@@ -601,7 +608,7 @@ const std::map<ov::DiscreteTypeInfo, ConversionContext::Convertor> ConversionCon
     {ov::op::v1::Divide::get_type_info_static(), Convertor(ConvertBinary<linalg::DivOp>())},
 };
 
-static mlir::OwningOpRef<mlir::ModuleOp> ngraph_to_mlir(MLIRContext* context,
+mlir::OwningOpRef<mlir::ModuleOp> ngraph_to_mlir(MLIRContext* context,
                                                  const ov::OutputVector& inputs,
                                                  const ov::NodeVector& nodes,
                                                  const ov::OutputVector& outputs) {
@@ -972,7 +979,7 @@ NodePtr elementwise_f32_binary_no_broadcast() {
 }
 
 
-static void injectMLIR(std::shared_ptr<ov::Model> model, MLIRContext* context) {
+void injectMLIR(std::shared_ptr<ov::Model> model, MLIRContext* context) {
     ov::pass::Manager manager;
     using namespace ov::op;
     manager.set_per_pass_validation(false);
@@ -987,7 +994,7 @@ static void injectMLIR(std::shared_ptr<ov::Model> model, MLIRContext* context) {
 }
 
 
-static MLIRContext* get_shared_mlir_context() {
+MLIRContext* get_shared_mlir_context() {
     // Gives MLIRContext instance shared for entire OV process and initialized once upon the initial request
     // FIXME: Bind with OpenVINO lifetime in the sutable class instead of dirty tricking with static lifetime
 
@@ -1025,6 +1032,8 @@ static MLIRContext* get_shared_mlir_context() {
 
     return context.get();
 }
+
+} // namespace
 
 void ov::pass::transformMLIR(std::shared_ptr<ov::Model> model) {
     injectMLIR(model, get_shared_mlir_context());
