@@ -10,8 +10,9 @@
 #include "mlir/ExecutionEngine/JitRunner.h"
 #include "mlir/ExecutionEngine/OptUtils.h"
 
-
 #include "openvino/op/op.hpp"
+
+#include "convert_common.hpp"
 
 
 namespace ov {
@@ -21,10 +22,6 @@ using ::mlir::OwningOpRef;
 using ::mlir::ModuleOp;
 using ::mlir::ExecutionEngine;
 using ::mlir::ModuleOp;
-
-using NodePtr = std::shared_ptr<ov::Node>;
-using SymbolPtr = std::shared_ptr<ov::Symbol>;
-using OVOutputTypes = std::vector<std::tuple<ov::element::Type, ov::PartialShape>>;
 
 class MLIREvaluate {
     OwningOpRef<ModuleOp> module;  // FIXME: needs to be kept?

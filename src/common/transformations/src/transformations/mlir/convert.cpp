@@ -16,9 +16,6 @@
 #include <openvino/pass/pattern/op/wrap_type.hpp>
 #include <unordered_map>
 
-#include "mlir_op.hpp"
-
-
 // TODO: Prune unused headers -- it's hard to understand needed ones
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
@@ -66,151 +63,8 @@
 
 #include "transformations/symbolic_transformations/symbolic_optimizations.hpp"
 
-namespace {
-
-using namespace mlir;
-using namespace ov::mlir;
-
-
-mlir::Location createLayerLocation(mlir::MLIRContext* ctx, const std::string& layerName, const std::string& layerType) {
-    const auto layerNameAttr = mlir::StringAttr::get(ctx, layerName);
-    const auto nameLoc = mlir::NameLoc::get(layerNameAttr);
-
-    SmallVector<mlir::NamedAttribute> fields;
-    fields.emplace_back(mlir::StringAttr::get(ctx, "type"), mlir::StringAttr::get(ctx, layerType));
-    fields.emplace_back(mlir::StringAttr::get(ctx, "name"), layerNameAttr);
-    auto metadata = mlir::DictionaryAttr::get(ctx, fields);
-
-    return mlir::FusedLoc::get(ctx, {nameLoc}, metadata);
-}
-
-SmallVector<int64_t> importShape(const ov::PartialShape& shape) {
-    SmallVector<int64_t> out(shape.rank().get_length());
-    // TODO: Add support for dynamically ranked shapes
-    for (size_t i = 0; i < out.size(); ++i) {
-        const auto& dim = shape[i];
-        out[i] = dim.is_static() ? dim.get_length() : mlir::ShapedType::kDynamic;
-    }
-    return out;
-}
-
-mlir::IntegerType getInt1Type(mlir::MLIRContext* ctx) {
-    return mlir::IntegerType::get(ctx, 1);
-}
-
-mlir::IntegerType getInt4Type(mlir::MLIRContext* ctx) {
-    return mlir::IntegerType::get(ctx, 4);
-}
-
-mlir::IntegerType getInt8Type(mlir::MLIRContext* ctx) {
-    return mlir::IntegerType::get(ctx, 8);
-}
-
-mlir::IntegerType getInt16Type(mlir::MLIRContext* ctx) {
-    return mlir::IntegerType::get(ctx, 16);
-}
-
-mlir::IntegerType getInt32Type(mlir::MLIRContext* ctx) {
-    return mlir::IntegerType::get(ctx, 32);
-}
-
-mlir::IntegerType getInt64Type(mlir::MLIRContext* ctx) {
-    return mlir::IntegerType::get(ctx, 64);
-}
-
-mlir::IntegerType getSInt4Type(mlir::MLIRContext* ctx) {
-    return mlir::IntegerType::get(ctx, 4, mlir::IntegerType::Signed);
-}
-
-mlir::IntegerType getSInt8Type(mlir::MLIRContext* ctx) {
-    return mlir::IntegerType::get(ctx, 8, mlir::IntegerType::Signed);
-}
-
-mlir::IntegerType getSInt16Type(mlir::MLIRContext* ctx) {
-    return mlir::IntegerType::get(ctx, 16, mlir::IntegerType::Signed);
-}
-
-mlir::IntegerType getSInt32Type(mlir::MLIRContext* ctx) {
-    return mlir::IntegerType::get(ctx, 32, mlir::IntegerType::Signed);
-}
-
-mlir::IntegerType getSInt64Type(mlir::MLIRContext* ctx) {
-    return mlir::IntegerType::get(ctx, 64, mlir::IntegerType::Signed);
-}
-
-mlir::IntegerType getUInt4Type(mlir::MLIRContext* ctx) {
-    return mlir::IntegerType::get(ctx, 4, mlir::IntegerType::Unsigned);
-}
-
-mlir::IntegerType getUInt8Type(mlir::MLIRContext* ctx) {
-    return mlir::IntegerType::get(ctx, 8, mlir::IntegerType::Unsigned);
-}
-
-mlir::IntegerType getUInt16Type(mlir::MLIRContext* ctx) {
-    return mlir::IntegerType::get(ctx, 16, mlir::IntegerType::Unsigned);
-}
-
-mlir::IntegerType getUInt32Type(mlir::MLIRContext* ctx) {
-    return mlir::IntegerType::get(ctx, 32, mlir::IntegerType::Unsigned);
-}
-
-mlir::IntegerType getUInt64Type(mlir::MLIRContext* ctx) {
-    return mlir::IntegerType::get(ctx, 64, mlir::IntegerType::Unsigned);
-}
-
-mlir::IntegerType getBool8Type(mlir::MLIRContext* ctx) {
-    // Signless 8-bit integer use for BOOL, to distinguish it from U8
-    return mlir::IntegerType::get(ctx, 8, mlir::IntegerType::Signless);
-}
-
-mlir::Type importPrecision(mlir::MLIRContext* ctx, const ov::element::Type& precision) {
-    switch (precision) {
-    case ov::element::Type_t::f64:
-        return mlir::Float64Type::get(ctx);
-    case ov::element::Type_t::f32:
-        return mlir::Float32Type::get(ctx);
-    case ov::element::Type_t::f16:
-        return mlir::Float16Type::get(ctx);
-    case ov::element::Type_t::bf16:
-        return mlir::BFloat16Type::get(ctx);
-    case ov::element::Type_t::i64:
-        return getSInt64Type(ctx);
-    case ov::element::Type_t::u64:
-        return getUInt64Type(ctx);
-    case ov::element::Type_t::i32:
-        return getSInt32Type(ctx);
-    case ov::element::Type_t::u32:
-        return getUInt32Type(ctx);
-    case ov::element::Type_t::i16:
-        return getSInt16Type(ctx);
-    case ov::element::Type_t::u16:
-        return getUInt16Type(ctx);
-    case ov::element::Type_t::i8:
-        return getSInt8Type(ctx);
-    case ov::element::Type_t::u8:
-        return getUInt8Type(ctx);
-    case ov::element::Type_t::i4:
-        return getSInt4Type(ctx);
-    case ov::element::Type_t::u4:
-        return getUInt4Type(ctx);
-    case ov::element::Type_t::boolean:
-        return getBool8Type(ctx);
-    default:
-        OPENVINO_THROW("Unsupported element_type: ", precision);
-    }
-}
-
-mlir::RankedTensorType importTensor(mlir::MLIRContext* ctx,
-                                    const ov::PartialShape& shape,
-                                    const ov::element::Type& elemType) {
-    return mlir::RankedTensorType::get(ArrayRef(importShape(shape)), importPrecision(ctx, elemType));
-}
-
-mlir::Location createLocation(mlir::MLIRContext* ctx, NodePtr node) {
-    return createLayerLocation(ctx, node->get_friendly_name(), node->get_type_name());
-}
-
-} // namespace
+#include "mlir_op.hpp"
+#include "convert_common.hpp"
 
 
 namespace std {
@@ -235,6 +89,9 @@ struct hash<ov::Output<ov::Node>> final {
 
 
 namespace {
+
+using namespace mlir;
+using namespace ov::mlir;
 
 MemRefType convertTensorToMemRef(TensorType tensorType) {
     ArrayRef<int64_t> shape = tensorType.getShape();
