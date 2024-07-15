@@ -58,5 +58,35 @@ void ConversionContext::set_convertor(NodePtr node, const Convertor& convertor) 
     node->get_rt_info()[rt_info_convertor()] = as_any;
 }
 
+
+
+const std::string& subgraph_mark() {
+    static const std::string mark = "__subgraph_mlir_mark";
+    return mark;
+}
+
+void set_subgraph_mark(NodePtr node) {
+    node->get_rt_info()[subgraph_mark()];
+}
+
+bool get_subgraph_mark(NodePtr node) {
+    return node->get_rt_info().count(subgraph_mark());
+}
+
+
+MarkPattern::MarkPattern(NodePtr pattern, ConversionContext::Convertor convertor) {
+    auto callback = [convertor](ov::pass::pattern::Matcher& m) {
+        // TODO: support multi-node patterns marking
+        auto node = m.get_match_root();
+        set_subgraph_mark(node);
+        ConversionContext::set_convertor(node, convertor);
+        return true;
+    };
+
+    auto m = std::make_shared<ov::pass::pattern::Matcher>(pattern, "MarkPattern");
+    register_matcher(m, callback);
+}
+
+
 } // namespace mlir
 } // namespace ov

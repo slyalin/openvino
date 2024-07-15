@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <openvino/pass/graph_rewrite.hpp>
+
 #include "mlir/IR/Value.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Builders.h"
@@ -43,6 +45,19 @@ public:
     static void set_convertor(NodePtr node, const Convertor& convertor);
 
     void convert(NodePtr node);
+};
+
+
+const std::string& subgraph_mark();
+
+void set_subgraph_mark(NodePtr node);
+
+bool get_subgraph_mark(NodePtr node);
+
+class MarkPattern : public ov::pass::MatcherPass {
+public:
+    OPENVINO_RTTI("MarkPattern", "0");
+    MarkPattern(NodePtr pattern, ConversionContext::Convertor convertor);
 };
 
 } // namespace mlir
