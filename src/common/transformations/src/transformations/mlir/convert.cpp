@@ -67,6 +67,7 @@
 #include "convert_common.hpp"
 #include "subgraph_tracker.hpp"
 #include "conversion_context.hpp"
+#include "op/matmul.hpp"
 
 
 namespace {
@@ -283,6 +284,7 @@ void injectMLIR(std::shared_ptr<ov::Model> model, MLIRContext* context) {
     manager.register_pass<MarkPattern>(elementwise_f32_binary_no_broadcast<v1::Subtract>(), ConvertBinary<linalg::SubOp>());
     manager.register_pass<MarkPattern>(elementwise_f32_binary_no_broadcast<v1::Multiply>(), ConvertBinary<linalg::MulOp>());
     manager.register_pass<MarkPattern>(elementwise_f32_binary_no_broadcast<v1::Divide>(), ConvertBinary<linalg::DivOp>());
+    manager.register_pass<MatMulPattern>();
     manager.register_pass<Partitioner>(context);
     manager.run_passes(model);
     model->validate_nodes_and_infer_types();
