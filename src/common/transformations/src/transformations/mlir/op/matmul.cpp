@@ -40,7 +40,7 @@ struct ConvertMatMul {
             dynamicSizes.push_back(dimSize);
         }
         auto empty = builder.create<tensor::EmptyOp>(loc, outType, dynamicSizes);
-        auto zero = mlir::Value(getConstant(builder, ov_output_element_type, 0));
+        auto zero = getConstant(builder, ov_output_element_type, 0);
         auto fill = builder.create<linalg::FillOp>(loc, mlir::ValueRange{zero}, mlir::ValueRange{empty});
         // TODO: Add other variants of transpose_a/transpose_b
         auto matmul = builder.create<linalg::MatmulTransposeBOp>(loc, mlir::ValueRange{inputs[0], inputs[1]}, mlir::ValueRange{fill.getResult(0)});
