@@ -36,9 +36,9 @@ mlir::arith::ConstantOp getConstant(OpBuilder &builder, const ov::element::Type&
     auto unkLoc = builder.getUnknownLoc();
     TypedAttr attr;
     auto type = importPrecision(builder.getContext(), precision);
-    if(precision.is_real()) {
+    if(precision.is_integral()) {
         attr = builder.getIntegerAttr(type, int64_t(value));
-    } else if(precision.is_integral()) {
+    } else if(precision.is_real()) {
         attr = builder.getFloatAttr(type, double(value));
     }
     assert(attr && "Unsupported ConstantOp type");
