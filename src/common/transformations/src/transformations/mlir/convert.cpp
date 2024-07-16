@@ -185,22 +185,53 @@ mlir::OwningOpRef<mlir::ModuleOp> ngraph_to_mlir(MLIRContext* context,
 }
 
 
-// This pass find marked with a special flag group of nodes and collapse each group to a single MLIR function
+// This pass converts a group of nodes into a single MLIROp
 NodePtr ngraph_to_mlir_op(MLIRContext* context, SubgraphPtr subgraph) {
+    mlir::OwningOpRef<mlir::ModuleOp> module = ngraph_to_mlir(context, subgraph->inputs, subgraph->nodes, subgraph->outputs);
 
-    mlir::OwningOpRef<mlir::ModuleOp> module;
+    const auto& inputs = subgraph->inputs;
+    using Index = DimensionsMap::value_type::value_type;
+    std::map<SymbolPtr, Index> input_map;
+    for (size_t i = 0; i < inputs.size(); ++i) {
+        auto input = inputs[i];
+        auto shape = input.get_partial_shape();
+        for (size_t j = 0; j < shape.size(); ++j) {
+            auto dim = shape[j];
+            if(shape[j].is_dynamic()) {
+                auto symbol = ov::symbol::ancestor_of(dim.get_symbol());
+                if(0 == input_map.count(symbol)) {
+                    input_map[symbol] = Index(i, j);
+                } else {
+                    std::cerr << "[ DEBUG ] Lost equality constraint for dimensions in output " << input << "\n"
+                              << "          If the constraint is violated in runtime it will result in the undefined behaviour.\n";
+                }
+            }
+        }
+    }
 
-    module = ngraph_to_mlir(context, subgraph->inputs, subgraph->nodes, subgraph->outputs);
-
+    std::tuple<size_t, size_t> empty(-1, -1);
+    const auto& outputs = subgraph->outputs;
     OVOutputTypes output_types;
-    for (size_t i = 0; i < subgraph->outputs.size(); ++i) {
+    DimensionsMap output_map;
+    output_map.reserve(outputs.size());
+    for (size_t i = 0; i < outputs.size(); ++i) {
+        auto output = outputs[i];
+        auto shape = output.get_partial_shape();
         output_types.push_back(
-            std::make_tuple(subgraph->outputs[i].get_element_type(), subgraph->outputs[i].get_partial_shape()));
+            std::make_tuple(output.get_element_type(), shape));
+        DimensionsMap::value_type dm;
+        dm.reserve(shape.size());
+        for (size_t j = 0; j < shape.size(); ++j) {
+            auto dim = shape[j];
+            dm.push_back(dim.is_dynamic() ? input_map.at(ov::symbol::ancestor_of(dim.get_symbol())) : empty);
+        }
+        output_map.emplace_back(dm);
     }
     return std::make_shared<MLIROp>(
         subgraph->inputs,
         std::make_shared<MLIREvaluate>(std::move(module)),
-        output_types
+        output_types,
+        output_map
     );
 };
 
