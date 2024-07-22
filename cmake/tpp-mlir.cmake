@@ -32,6 +32,12 @@ if (TPP_MLIR_DIR)
     function(add_tpp_mlir_libs target)
         target_link_directories(${target} PRIVATE ${TPP_MLIR_DIR}/lib)
         target_link_libraries(${target} PRIVATE ${TPP_MLIR_LIBS})
+        target_link_options(${target} PRIVATE
+            -Wl,--no-as-needed
+            -L${TPP_MLIR_DIR}/lib
+            -ltpp_xsmm_runner_utils
+            -Wl,--as-needed
+        )
     endfunction()
 else()
     function(add_tpp_mlir_includes target)
