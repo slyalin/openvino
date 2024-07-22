@@ -55,6 +55,7 @@
 
 #ifdef TPP_MLIR // If TPP is available
 #include "TPP/PassBundles.h"
+#include "TPP/Passes.h"
 #endif
 
 namespace {
