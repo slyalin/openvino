@@ -1,5 +1,7 @@
-# run it from tpp-mlir/build subdirectory
-# set CUSTOM_LLVM_ROOT to llvm-project/build directory
+#!/bin/bash
+
+# Run it in tpp-mlir/build subdirectory
+# Set CUSTOM_LLVM_ROOT to llvm-project/build directory
 
 cmake -G Ninja .. \
    -DCMAKE_BUILD_TYPE=RelWithDebInfo \

@@ -5,6 +5,7 @@ if (TPP_MLIR_DIR)
     message(STATUS "TPP-MLIR at ${TPP_MLIR_DIR}")
     add_compile_definitions(TPP_MLIR)
     set(TPP_MLIR_LIBS
+            # Keep the next two libs at the top of the list to avoid undefined references at link time
             TPPPipeline
             TPPPassBundles
             TPPCheckDialect
