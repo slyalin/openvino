@@ -38,6 +38,8 @@ if (TPP_MLIR_DIR)
             -ltpp_xsmm_runner_utils
             -Wl,--as-needed
         )
+        #FIXME: Provide platform-independent way of doing that:
+        install(FILES ${TPP_MLIR_DIR}/lib/libtpp_xsmm_runner_utils.so ${TPP_MLIR_DIR}/lib/libtpp_xsmm_runner_utils.so.19.0git DESTINATION ${OV_CPACK_RUNTIMEDIR})
     endfunction()
 else()
     function(add_tpp_mlir_includes target)
