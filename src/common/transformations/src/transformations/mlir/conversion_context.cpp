@@ -58,6 +58,16 @@ void ConversionContext::set_convertor(NodePtr node, const Convertor& convertor) 
     node->get_rt_info()[rt_info_convertor()] = as_any;
 }
 
+Value ConversionContext::get_dimension_value(const Dimension& d) {
+    auto symbol = d.get_symbol();
+    assert(symbol);
+    symbol = ov::symbol::ancestor_of(symbol);
+    // Suppose all dimensions are known and the map is populated
+    // FIXME: Add dimensions on demand to avoid unnecessary operations in the produced MLIR
+    assert(dimension_map.count(symbol));
+    return dimension_map.at(symbol);
+}
+
 
 
 const std::string& subgraph_mark() {

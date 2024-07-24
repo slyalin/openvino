@@ -52,5 +52,17 @@ mlir::arith::ConstantOp getConstant(OpBuilder &builder, const ov::element::Type&
     return builder.create<arith::ConstantOp>(unkLoc, type, attr);
 }
 
+bool has_dynamic_rank(NodePtr node);
+
+bool are_equal_dimensions(Dimension d1, Dimension d2);
+
+bool has_broadcast(Dimension from, Dimension to);
+
+bool statically_broadcastable(const PartialShape& from, const PartialShape& to);
+
+std::vector<int64_t> broadcast_dimensions(const PartialShape& from, const PartialShape& to);
+
+bool symbol_ancestor_less (SymbolPtr x, SymbolPtr y);
+
 } // namespace mlir
 } // namespace ov
