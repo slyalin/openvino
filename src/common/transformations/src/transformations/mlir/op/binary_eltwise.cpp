@@ -67,11 +67,14 @@ namespace mlir {
 
 using namespace ov::pass::pattern;
 
-BinaryEltwisePatternBase::BinaryEltwisePatternBase(NodeTypeInfo wrapped_type, Builder op_builder)
+BinaryEltwisePatternBase::BinaryEltwisePatternBase(NodeTypeInfo wrapped_type, Builder op_builder, const std::set<element::Type>& element_types)
     : MarkPattern(
         std::make_shared<pass::pattern::op::WrapType>(
             wrapped_type,
-            [](const Output<Node>& output) {
+            [element_types](const Output<Node>& output) {
+                if(!element_types.empty() && !element_types.count(output.get_element_type())) {
+                    return false;
+                }
                 auto node = output.get_node_shared_ptr();
                 for(const auto& input: node->inputs()) {
                     if(!statically_broadcastable(input.get_partial_shape(), output.get_partial_shape())) {
