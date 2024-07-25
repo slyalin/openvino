@@ -45,10 +45,14 @@ using namespace ov::op;
 
 MatMulPattern::MatMulPattern() : MarkPattern(
     wrap_type<v0::MatMul>({any_input(), any_input()}, [](const Output<Node>& output) {
-        auto matmul_node = std::dynamic_pointer_cast<v0::MatMul>(output.get_node_shared_ptr());
-        assert(matmul_node);
+        auto node = std::dynamic_pointer_cast<v0::MatMul>(output.get_node_shared_ptr());
+        assert(node);
         // FIXME: current code limitation
-        return !matmul_node->get_transpose_a() && matmul_node->get_transpose_b();
+        return
+            !has_dynamic_rank(node) &&
+            !node->get_transpose_a() && node->get_transpose_b() &&
+            node->get_input_partial_shape(0).rank().get_length() == 2 &&
+            node->get_input_partial_shape(1).rank().get_length() == 2;
     }),
     ConvertMatMul()) {
     }
