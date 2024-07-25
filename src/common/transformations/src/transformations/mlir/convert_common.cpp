@@ -209,28 +209,46 @@ bool statically_broadcastable(const PartialShape& from, const PartialShape& to) 
     return true;
 }
 
-std::vector<int64_t> broadcast_dimensions(const PartialShape& from, const PartialShape& to) {
-    assert(statically_broadcastable(from, to));
+BroadcastDimensions broadcast_dimensions(const PartialShape& src, const PartialShape& dst) {
+    assert(statically_broadcastable(src, dst));
 
-    auto from_rank = from.rank().get_length();
-    auto to_rank = to.rank().get_length();
+    auto src_rank = src.rank().get_length();
+    auto dst_rank = dst.rank().get_length();
+    auto offset = dst_rank - src_rank;
 
-    auto offset = to_rank - from_rank;
-    std::vector<int64_t> dimensions;
+    BroadcastDimensions result;
+    auto& [collapse_groups, dimensions] = result;
+    ReassociationIndices group;
+    bool group_bonded = false;  // true if `group` has a non-brodcasted dimension
 
-    for(size_t i = 0; i < to_rank; ++i) {
-        if (i < offset) {
-            dimensions.push_back(i);
+    size_t dst_i = 0;  // dimension index in the `dst` shape
+    for(; dst_i < offset; ++dst_i) {
+        dimensions.push_back(dst_i);
+    }
+    for(; dst_i < dst_rank; ++dst_i) {
+        auto src_i = dst_i - offset;
+        auto src_d = src[src_i];
+        auto dst_d = dst[dst_i];
+        if(has_broadcast(src_d, dst_d)) {
+            dimensions.push_back(dst_i);
         } else {
-            auto d_from = from[i - offset];
-            auto d_to = to[i];
-            if(has_broadcast(d_from, d_to)) {
-                dimensions.push_back(i);
+            if(group_bonded) {
+                collapse_groups.emplace_back(group);
+                group = ReassociationIndices();
+            } else {
+                group_bonded = true;
             }
         }
+        group.push_back(src_i);
     }
 
-    return dimensions;
+    if(group_bonded && !group.empty()) {
+        collapse_groups.emplace_back(group);
+    }
+
+    assert(dst_rank - dimensions.size() == collapse_groups.size());
+
+    return result;
 }
 
 bool symbol_ancestor_less (SymbolPtr x, SymbolPtr y) {

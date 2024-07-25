@@ -50,6 +50,8 @@ public:
     void convert(NodePtr node);
 
     Value get_dimension_value(const Dimension& d);
+
+    SmallVector<Value> get_dynamic_dimension_values (const PartialShape& shape);
 };
 
 

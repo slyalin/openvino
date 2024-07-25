@@ -9,6 +9,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Location.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 
 #include "typedefs.hpp"
 
@@ -60,7 +61,8 @@ bool has_broadcast(Dimension from, Dimension to);
 
 bool statically_broadcastable(const PartialShape& from, const PartialShape& to);
 
-std::vector<int64_t> broadcast_dimensions(const PartialShape& from, const PartialShape& to);
+using BroadcastDimensions = std::tuple<SmallVector<ReassociationIndices>, SmallVector<int64_t>>;
+BroadcastDimensions broadcast_dimensions(const PartialShape& from, const PartialShape& to);
 
 bool symbol_ancestor_less (SymbolPtr x, SymbolPtr y);
 

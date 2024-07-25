@@ -68,6 +68,15 @@ Value ConversionContext::get_dimension_value(const Dimension& d) {
     return dimension_map.at(symbol);
 }
 
+SmallVector<Value> ConversionContext::get_dynamic_dimension_values (const PartialShape& shape) {
+    SmallVector<Value> dims;
+    for (const auto& dim: shape) {
+        if (dim.is_dynamic()) {
+            dims.push_back(get_dimension_value(dim));
+        }
+    }
+    return dims;
+}
 
 
 const std::string& subgraph_mark() {
