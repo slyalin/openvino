@@ -50,6 +50,8 @@ else()
     set(ENABLE_INTEL_NPU_DEFAULT OFF)
 endif()
 
+ov_option (ENABLE_GRAPH_COMPILER "Enable Graph Compiler" OFF)
+
 ov_dependent_option (ENABLE_INTEL_NPU "NPU plugin for OpenVINO runtime" ${ENABLE_INTEL_NPU_DEFAULT} "X86 OR X86_64;NOT APPLE" OFF)
 
 ov_option (ENABLE_DEBUG_CAPS "enable OpenVINO debug capabilities at runtime" OFF)

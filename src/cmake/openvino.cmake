@@ -48,6 +48,7 @@ target_link_libraries(${TARGET_NAME} PRIVATE openvino::reference
                                              openvino::pugixml
                                              ${CMAKE_DL_LIBS}
                                              Threads::Threads
+                                             ${GRAPH_COMPILER_LIBS}
                                              ${MLIR_ALL_LIBS})
 
 add_tpp_mlir_libs(${TARGET_NAME})

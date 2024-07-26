@@ -56,6 +56,8 @@
 #ifdef TPP_MLIR // If TPP is available
 #include "TPP/PassBundles.h"
 #include "TPP/Passes.h"
+#elif defined(GRAPH_COMPILER)
+#include "gc/Transforms/Passes.h"
 #endif
 
 namespace {
@@ -67,6 +69,10 @@ using SymbolPtr = std::shared_ptr<ov::Symbol>;
 
 void prepareMLIRKernelWithoutWrapper(mlir::OwningOpRef<mlir::ModuleOp>& module, bool tpp_mlir_enabled) {
     PassManager pm(module->getContext());
+
+#ifdef GRAPH_COMPILER
+    gc::populateCPUPipeline(pm);
+#else
     if(tpp_mlir_enabled) {
         #ifdef TPP_MLIR
             tpp::DefaultPipelineOptions defPipelineOpts;
@@ -132,6 +138,7 @@ void prepareMLIRKernelWithoutWrapper(mlir::OwningOpRef<mlir::ModuleOp>& module, 
         // Convert remaining unrealized_casts (always needed).
         pm.addPass(createReconcileUnrealizedCastsPass());
     }
+#endif
 
     auto result = pm.run(module.get());
     if (failed(result)) {
@@ -206,10 +213,10 @@ std::unique_ptr<llvm::Module> lowerToLLVMIR(Operation* module, llvm::LLVMContext
 }
 
 // TODO: u4/i4 types are not supported
-struct MemRef {
-    MemRef() = default;
+struct MemRefDescriptor {
+    MemRefDescriptor() = default;
 
-    MemRef(ov::Tensor tensor)
+    MemRefDescriptor    (ov::Tensor tensor)
         : allocated(tensor.data()),
           aligned(tensor.data()),
           offset(0),
@@ -317,9 +324,9 @@ NodePtr MLIROp::clone_with_new_inputs(const ov::OutputVector& new_args) const {
 }
 
 bool MLIROp::evaluate(ov::TensorVector& outputs, const ov::TensorVector& inputs) const {
-    std::vector<MemRef> memref_args;
+    std::vector<MemRefDescriptor> memref_args;
     for (size_t i = 0; i < inputs.size(); ++i) {
-        memref_args.push_back(MemRef(inputs[i]));
+        memref_args.push_back(MemRefDescriptor(inputs[i]));
     }
     for (size_t i = 0; i < outputs.size(); ++i) {
         // TODO: Optimize by adding all dimensions to dimensions_map, not only dynamic
@@ -337,11 +344,11 @@ bool MLIROp::evaluate(ov::TensorVector& outputs, const ov::TensorVector& inputs)
         }
         //std::cerr << "[ DEBUG ] Set outputs[" << i << "].shape(" << target << ")\n";
         outputs[i].set_shape(target);
-        memref_args.push_back(MemRef(outputs[i]));
+        memref_args.push_back(MemRefDescriptor(outputs[i]));
     }
     std::vector<void*> args;
 
-    std::for_each(memref_args.begin(), memref_args.end(), [&args](MemRef& x) {
+    std::for_each(memref_args.begin(), memref_args.end(), [&args](MemRefDescriptor& x) {
         x.append_to_packed_args(args);
     });
 

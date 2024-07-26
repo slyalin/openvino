@@ -59,6 +59,11 @@
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
+#ifdef GRAPH_COMPILER
+#include "gc/ExecutionEngine/Driver/Driver.h"
+#endif
+
+
 #ifdef TPP_MLIR // If TPP is available
 #include "TPP/Dialect/Check/CheckDialect.h"
 #include "TPP/Dialect/Perf/PerfDialect.h"
@@ -294,7 +299,23 @@ void injectMLIR(std::shared_ptr<ov::Model> model, MLIRContext* context, bool tpp
     model->validate_nodes_and_infer_types();
 }
 
+void loadDialects(MLIRContext* context) {
+    context->loadDialect<mlir::func::FuncDialect>();
+    context->loadDialect<mlir::linalg::LinalgDialect>();
+    context->loadDialect<mlir::bufferization::BufferizationDialect>();
+}
 
+#ifdef GRAPH_COMPILER
+MLIRContext* get_shared_mlir_context(bool ignore) {
+    static MLIRContext* context = []() {
+        OPENVINO_MLIR_DEBUG_PRINT("[ DEBUG ] Using GraphCompiler\n");
+        static MLIRContext context(gc::initCompilerAndGetDialects());
+        loadDialects(&context);
+        return &context;
+    }();
+    return context;
+}
+#else
 MLIRContext* get_shared_mlir_context(bool tpp_mlir_enabled_current) {
     // Gives MLIRContext instance shared for entire OV process and initialized once upon the initial request
     // FIXME: Bind with OpenVINO lifetime in the sutable class instead of dirty tricking with static lifetime
@@ -346,14 +367,12 @@ MLIRContext* get_shared_mlir_context(bool tpp_mlir_enabled_current) {
         mlir::tensor::registerTransformDialectExtension(registry);
 
         context = std::make_shared<MLIRContext>(registry);
-
-        context->loadDialect<mlir::func::FuncDialect>();
-        context->loadDialect<mlir::linalg::LinalgDialect>();
-        context->loadDialect<mlir::bufferization::BufferizationDialect>();
+        loadDialects(context.get());
     }
 
     return context.get();
 }
+#endif
 
 } // namespace
 
