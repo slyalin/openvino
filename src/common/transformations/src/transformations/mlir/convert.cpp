@@ -204,8 +204,9 @@ NodePtr ngraph_to_mlir_op(MLIRContext* context, SubgraphPtr subgraph, bool tpp_m
                 if(0 == input_map.count(symbol)) {
                     input_map[symbol] = Index(i, j);
                 } else {
-                    std::cerr << "[ DEBUG ] Lost equality constraint for dimensions in output " << input << "\n"
-                              << "          If the constraint is violated in runtime it will result in the undefined behaviour.\n";
+                    OPENVINO_MLIR_DEBUG_PRINT(
+                        "[ DEBUG ] Lost equality constraint for dimensions in output " << input << ".\n" <<
+                        "          If the constraint is violated in runtime it will result in the undefined behaviour.\n");
                 }
             }
         }
@@ -265,7 +266,7 @@ public:
         SubgraphTracker tracker([this](SubgraphPtr subgraph) {
                 auto mlir_op = ngraph_to_mlir_op(context, subgraph, tpp_mlir_enabled);
                 replace_subgraph(subgraph, mlir_op);
-                std::cerr << "Created MLIR op: " << mlir_op << "\n";
+                OPENVINO_MLIR_DEBUG_PRINT("Created MLIR op: " << mlir_op << "\n");
             }
         );
         for(auto node: model->get_ordered_ops()) {
@@ -303,7 +304,7 @@ MLIRContext* get_shared_mlir_context(bool tpp_mlir_enabled_current) {
 
     if(context) {
         if(tpp_mlir_enabled_current != tpp_mlir_enabled) {
-            std::cerr << "[ DEBUG ] Switched TPP mode, reinitialize MLIR context\n";
+            OPENVINO_MLIR_DEBUG_PRINT("[ DEBUG ] Switched TPP mode, reinitialize MLIR context\n");
             tpp_mlir_enabled = tpp_mlir_enabled_current;
             context.reset();
         }
@@ -315,15 +316,15 @@ MLIRContext* get_shared_mlir_context(bool tpp_mlir_enabled_current) {
         llvm::InitializeNativeTarget();
         llvm::InitializeNativeTargetAsmPrinter();
 
-        std::cerr << "[ DEBUG ] Using TPP_MLIR: ";
+        OPENVINO_MLIR_DEBUG_PRINT("[ DEBUG ] Using TPP_MLIR: ");
         if(tpp_mlir_enabled) {
-            std::cerr << "YES\n";
+            OPENVINO_MLIR_DEBUG_PRINT("YES\n");
             // Initialize GPU-related LLVM machinery
             #ifdef TPP_MLIR
                 tpp::initializeGpuTargets();
             #endif
         } else {
-            std::cerr << "NO\n";
+            OPENVINO_MLIR_DEBUG_PRINT("NO\n");
         }
 
         // Add the following to include *all* MLIR Core dialects, or selectively

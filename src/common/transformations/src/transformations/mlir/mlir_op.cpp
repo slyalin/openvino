@@ -221,7 +221,7 @@ struct MemRef {
             assert(byte_strides[i] % element_size == 0);
             // TODO: handle case when stride is not aligned (restrict at OV API level)
             strides[i] = byte_strides[i] / element_size;
-            //std::cout << "stride [" << i << "] = " << strides[i] << "\n";
+            //std::cerr << "stride [" << i << "] = " << strides[i] << "\n";
         }
     }
 
@@ -254,21 +254,22 @@ using namespace ::mlir;
 
 MLIREvaluate::MLIREvaluate(OwningOpRef<mlir::ModuleOp> _module, bool tpp_mlir_enabled) :
     module(std::move(_module)) {
-    if (true) {
-        std::cerr << "[ DEBUG ] Source MLIR:\n";
-        std::cerr << "-----------------------------------------\n";
-        module->dump();
-        std::cerr << "-----------------------------------------\n";
-    }
+
+    OPENVINO_MLIR_DEBUG_PRINT(
+        "[ DEBUG ] Source MLIR:\n"
+        "-----------------------------------------\n");
+    OPENVINO_MLIR_DEBUG(module->dump());
+    OPENVINO_MLIR_DEBUG_PRINT(
+        "-----------------------------------------\n");
 
     prepareMLIRKernelWithoutWrapper(module, tpp_mlir_enabled);
 
-    if (true) {
-        std::cerr << "[ DEBUG ] Target LLVM:\n";
-        std::cerr << "-----------------------------------------\n";
-        module->dump();
-        std::cerr << "-----------------------------------------\n";
-    }
+    OPENVINO_MLIR_DEBUG_PRINT(
+        "[ DEBUG ] Target LLVM:\n"
+        "-----------------------------------------\n");
+    OPENVINO_MLIR_DEBUG(module->dump());
+    OPENVINO_MLIR_DEBUG_PRINT(
+        "-----------------------------------------\n");
 
     auto optPipeline = mlir::makeOptimizingTransformer(2,
                                                         /*sizeLevel=*/0,  // FIXME: HARDCODED
@@ -321,6 +322,7 @@ bool MLIROp::evaluate(ov::TensorVector& outputs, const ov::TensorVector& inputs)
         memref_args.push_back(MemRef(inputs[i]));
     }
     for (size_t i = 0; i < outputs.size(); ++i) {
+        // TODO: Optimize by adding all dimensions to dimensions_map, not only dynamic
         Shape target;
         PartialShape expected = get_output_partial_shape(i);
         for(size_t j = 0; j < expected.size(); ++j) {
