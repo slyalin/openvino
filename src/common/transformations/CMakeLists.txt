@@ -36,13 +36,13 @@ target_link_libraries(${TARGET_NAME}_obj PRIVATE
         openvino::reference
         openvino::itt
         openvino::core::dev
-        ${GRAPH_COMPILER_LIBS}
         openvino::shape_inference)
 
 target_include_directories(${TARGET_NAME}_obj PRIVATE "${PUBLIC_HEADERS_DIR}"
                                                       "${CMAKE_CURRENT_SOURCE_DIR}/src"
                                                       "${MLIR_INCLUDE_DIRS}"
-                                                      "${LLVM_INCLUDE_DIRS}")
+                                                      "${LLVM_INCLUDE_DIRS}"
+                                                      "${GRAPH_COMPILER_INCLUDES}")
 
 add_tpp_mlir_includes(${TARGET_NAME}_obj)
 
