@@ -397,14 +397,14 @@ void ov::pass::transformMLIR(std::shared_ptr<ov::Model> model) {
 
         if (mode_str == "TPP") {
 #ifndef TPP_MLIR
-            OPENVINO_ASSERT(false,
+            OPENVINO_THROW(
                 "[ ERROR ] OpenVINO wasn't compiled with TPP_MLIR support, "
                 "but OV_MLIR_MODE environment variable is set to TPP.");
 #endif
             mode = MLIR_MODE_TPP;
         } else if (mode_str == "GC") {
 #ifndef GRAPH_COMPILER
-            OPENVINO_ASSERT(false,
+            OPENVINO_THROW(
                 "[ ERROR ] OpenVINO wasn't compiled with GRAPH_COMPILER support, "
                 "but OV_MLIR_MODE environment variable is set to GC.");
 #endif
