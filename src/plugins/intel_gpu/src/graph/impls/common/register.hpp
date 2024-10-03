@@ -27,7 +27,6 @@ REGISTER_COMMON(data);
 REGISTER_COMMON(generic_primitive);
 REGISTER_COMMON(input_layout);
 REGISTER_COMMON(loop);
-REGISTER_COMMON(prior_box);
 
 #undef REGISTER_COMMON
 

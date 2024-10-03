@@ -16,7 +16,6 @@ void register_implementations() {
     REGISTER_COMMON(generic_primitive);
     REGISTER_COMMON(input_layout);
     REGISTER_COMMON(loop);
-    REGISTER_COMMON(prior_box);
 }
 
 }  // namespace common
