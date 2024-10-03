@@ -29,15 +29,37 @@ enum MlirMode {
     MLIR_MODE_DEFAULT,
 };
 
+using JitModuleFuncT = void (*)(void**);
+static const char defaultFoldName[] = "runtime_fold";
+
+struct FoldingInfo {
+    int32_t num_orig_args;
+    llvm::ArrayRef<int32_t> fold_args;
+    llvm::ArrayRef<int32_t> compute_args;
+    llvm::ArrayRef<int64_t> fold_buffer_ids;
+    llvm::ArrayRef<int32_t> folded_ranks;
+    std::vector<std::vector<int64_t>> folded_shapes;
+    JitModuleFuncT fold_func = nullptr;
+};
+
+struct CachedBuffer {
+    void* buffer;
+    std::vector<int64_t> shape;
+    std::vector<int64_t> strides;
+};
 
 class MLIREvaluate {
     OwningOpRef<ModuleOp> module;  // FIXME: needs to be kept?
     std::unique_ptr<ExecutionEngine> engine;
 
+    void set_folding_info();
 public:
 
     MLIREvaluate(OwningOpRef<ModuleOp> _module, MlirMode mode);
+    ~MLIREvaluate();
     bool invoke_packed(std::vector<void*>& args);
+    FoldingInfo folding_info;
+    std::unordered_map<int64_t, CachedBuffer> cached_const_buffers;
 };
 
 

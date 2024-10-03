@@ -9,6 +9,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <unordered_set>
 
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Pass/PassManager.h"
@@ -22,6 +23,9 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "mlir-c/ExecutionEngine.h"
+#include "mlir/CAPI/IR.h"
+#include "mlir/CAPI/Wrap.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
@@ -241,6 +245,13 @@ struct MemRefDescriptor {
         }
     }
 
+    MemRefDescriptor(ov::mlir::CachedBuffer buffer)
+        : allocated(buffer.buffer),
+          aligned(buffer.buffer),
+          offset(0),
+          shape(buffer.shape),
+          strides(buffer.strides) {}
+
     void* allocated;
     void* aligned;
     int64_t offset;
@@ -267,6 +278,100 @@ namespace mlir {
 
 using namespace ::mlir;
 
+static std::unordered_set<const MLIROp *> executed_ops;
+
+void MLIREvaluate::set_folding_info() {
+    {
+        auto expectArgs = engine->lookup("__num_orig_args");
+        if (!expectArgs) {
+            llvm::consumeError(expectArgs.takeError());
+            return;
+        }
+        folding_info.num_orig_args = *reinterpret_cast<int32_t*>(*expectArgs);
+    }
+
+    {
+        auto expectFold = engine->lookupPacked(defaultFoldName);
+        if (!expectFold) {
+            llvm::consumeError(expectFold.takeError());
+            return;
+        }
+        folding_info.fold_func = *expectFold;
+    }
+
+    {
+        auto expectBufferIds = engine->lookup("__runtime_fold_buffer_ids");
+        if (!expectBufferIds) {
+            llvm::consumeError(expectBufferIds.takeError());
+            return;
+        }
+        auto raw = reinterpret_cast<int64_t*>(*expectBufferIds);
+        folding_info.fold_buffer_ids = llvm::ArrayRef<int64_t>{raw + 1, raw[0]};
+    }
+
+    {
+        auto expectFold = engine->lookup("__fold_args");
+        if (!expectFold) {
+            llvm::consumeError(expectFold.takeError());
+            return;
+        }
+        auto raw = reinterpret_cast<int32_t*>(*expectFold);
+        folding_info.fold_args = llvm::ArrayRef<int32_t>{raw + 1, raw[0]};
+    }
+
+    {
+        auto expect = engine->lookup("__compute_args");
+        if (!expect) {
+            llvm::consumeError(expect.takeError());
+            return;
+        }
+        auto raw = reinterpret_cast<int32_t*>(*expect);
+        folding_info.compute_args = llvm::ArrayRef<int32_t>{raw + 1, raw[0]};
+    }
+
+    {
+        auto expect = engine->lookup("__folded_ranks");
+        if (!expect) {
+            llvm::consumeError(expect.takeError());
+            return;
+        }
+        auto raw = reinterpret_cast<int32_t*>(*expect);
+        folding_info.folded_ranks = llvm::ArrayRef<int32_t>{raw, folding_info.fold_buffer_ids.size()};
+    }
+
+    {
+        auto expect = engine->lookup("__folded_shapes");
+        if (!expect) {
+            llvm::consumeError(expect.takeError());
+            return;
+        }
+        int32_t size = folding_info.fold_buffer_ids.size();  // element bytes of each buffer
+        for (auto r : folding_info.folded_ranks) {
+            size += r;
+        }
+        auto raw = reinterpret_cast<int64_t*>(*expect);
+        llvm::ArrayRef<int64_t> folded_shapes = llvm::ArrayRef<int64_t>{raw, size};
+        int pos = 0;
+        for (int i = 0; i < folding_info.folded_ranks.size(); ++i) {
+            std::vector<int64_t> shape(folded_shapes.begin() + pos,
+                                       folded_shapes.begin() + pos + folding_info.folded_ranks[i] + 1);
+            pos += folding_info.folded_ranks[i] + 1;
+            folding_info.folded_shapes.push_back(shape);
+        }
+    }
+
+    for (auto id : folding_info.fold_buffer_ids) {
+        std::vector<int64_t> shape = folding_info.folded_shapes[id];
+        size_t size = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<int64_t>());
+        shape.pop_back();  // delete the last which is bytes of element
+        std::vector<int64_t> strides(shape.size(), 1);
+        for (int i = strides.size() - 2; i >= 0; --i) {
+            strides[i] = strides[i + 1] * shape[i + 1];
+        }
+        void* buffer = std::aligned_alloc(/*alignment*/ 64, size);
+        cached_const_buffers[id] = CachedBuffer{buffer, shape, strides};
+    }
+}
 
 MLIREvaluate::MLIREvaluate(OwningOpRef<mlir::ModuleOp> _module, MlirMode mode) :
     module(std::move(_module)) {
@@ -291,16 +396,37 @@ MLIREvaluate::MLIREvaluate(OwningOpRef<mlir::ModuleOp> _module, MlirMode mode) :
                                                         /*sizeLevel=*/0,  // FIXME: HARDCODED
                                                         /*targetMachine=*/nullptr);
 
-    mlir::ExecutionEngineOptions engineOptions;
-    engineOptions.transformer = optPipeline;  // opt level looks to be overriden in lowerToLLVMIR, but is still used
-                                                // in `create` independently
-    engineOptions.llvmModuleBuilder = lowerToLLVMIR;
-    auto maybeEngine = mlir::ExecutionEngine::create(module.get(), engineOptions);
-    if (maybeEngine) {
-        engine = std::move(maybeEngine.get());
-    } else {
-        llvm::errs() << "failed to construct an execution engine\n";
-        abort();
+    // mlir::ExecutionEngineOptions engineOptions;
+    // engineOptions.transformer = optPipeline;  // opt level looks to be overriden in lowerToLLVMIR, but is still used
+    //                                             // in `create` independently
+    // engineOptions.llvmModuleBuilder = lowerToLLVMIR;
+    // engineOptions.enableObjectDump = true;
+    // auto maybeEngine = mlir::ExecutionEngine::create(module.get(), engineOptions);
+
+    int optLevel = 3;
+    const std::vector<std::string> sharedLibPaths;
+    // sharedLibPaths = {"/home/xiaoguang/ov-gc/llvm-project/llvm-install/lib/libmlir_c_runner_utils.so",
+    //                   "/home/xiaoguang/ov-gc/llvm-project/llvm-install/lib/libmlir_runner_utils.so",
+    //                   "/home/xiaoguang/ov-gc/graph-compiler/build/lib/libGcCpuRuntime.so"};
+    bool enableObjectDump = true;
+    llvm::SmallVector<MlirStringRef, 4> libPaths;
+    for (const std::string &path : sharedLibPaths)
+        libPaths.push_back({path.c_str(), path.length()});
+    MlirExecutionEngine executionEngine =
+        mlirExecutionEngineCreate(wrap(module.get()), optLevel, libPaths.size(),
+                                libPaths.data(), enableObjectDump);
+    if (mlirExecutionEngineIsNull(executionEngine))
+        throw std::runtime_error("Failure while creating the ExecutionEngine.");
+
+    engine = std::unique_ptr<mlir::ExecutionEngine>(static_cast<mlir::ExecutionEngine *>(executionEngine.ptr));
+    // engine->dumpToObjectFile("./dumped_ov.o");
+
+    set_folding_info();
+}
+
+MLIREvaluate::~MLIREvaluate() {
+    for (auto pair : cached_const_buffers) {
+        std::free(pair.second.buffer);
     }
 }
 
@@ -333,36 +459,102 @@ NodePtr MLIROp::clone_with_new_inputs(const ov::OutputVector& new_args) const {
 }
 
 bool MLIROp::evaluate(ov::TensorVector& outputs, const ov::TensorVector& inputs) const {
-    std::vector<MemRefDescriptor> memref_args;
-    for (size_t i = 0; i < inputs.size(); ++i) {
-        memref_args.push_back(MemRefDescriptor(inputs[i]));
-    }
-    for (size_t i = 0; i < outputs.size(); ++i) {
-        // TODO: Optimize by adding all dimensions to dimensions_map, not only dynamic
-        Shape target;
-        PartialShape expected = get_output_partial_shape(i);
-        for(size_t j = 0; j < expected.size(); ++j) {
-            auto dim = expected[j];
-            if(dim.is_dynamic()) {
-                int input_index, dim_index;
-                std::tie(input_index, dim_index) = dimensions_map[i][j];
-                target.push_back(inputs[input_index].get_shape()[dim_index]);
-            } else {
-                target.push_back(dim.get_length());
+    OPENVINO_MLIR_DEBUG_PRINT("[ DEBUG ] input size: " << inputs.size() << ", output size: " << outputs.size() << "\n");
+    if (engine->folding_info.fold_func == nullptr) {  // No folding, call entry() directly
+        std::vector<MemRefDescriptor> memref_args;
+        for (size_t i = 0; i < inputs.size(); ++i) {
+            memref_args.push_back(MemRefDescriptor(inputs[i]));
+        }
+        for (size_t i = 0; i < outputs.size(); ++i) {
+            // TODO: Optimize by adding all dimensions to dimensions_map, not only dynamic
+            Shape target;
+            PartialShape expected = get_output_partial_shape(i);
+            for (size_t j = 0; j < expected.size(); ++j) {
+                auto dim = expected[j];
+                if (dim.is_dynamic()) {
+                    int input_index, dim_index;
+                    std::tie(input_index, dim_index) = dimensions_map[i][j];
+                    target.push_back(inputs[input_index].get_shape()[dim_index]);
+                } else {
+                    target.push_back(dim.get_length());
+                }
+            }
+            // std::cerr << "[ DEBUG ] Set outputs[" << i << "].shape(" << target << ")\n";
+            outputs[i].set_shape(target);
+            memref_args.push_back(MemRefDescriptor(outputs[i]));
+        }
+
+        std::vector<void*> args;
+        std::for_each(memref_args.begin(), memref_args.end(), [&args](MemRefDescriptor& x) {
+            x.append_to_packed_args(args);
+        });
+
+        OPENVINO_MLIR_DEBUG_PRINT("[ DEBUG ] Call entry func directly\n");
+        return engine->invoke_packed(args);
+    } else {                                  // call fold() first, then call entry()
+        if (executed_ops.count(this) == 0) {  // Call fold()
+            std::vector<MemRefDescriptor> memref_args;
+            // Args of fold(): {constant inputs, folded inputs}.
+            for (auto id : engine->folding_info.fold_args) {
+                if (id < engine->folding_info.num_orig_args) {
+                    memref_args.push_back(MemRefDescriptor(inputs[id]));
+                } else {
+                    int64_t buffer_id = id - engine->folding_info.num_orig_args;
+                    assert(engine->cached_const_buffers.find(buffer_id) != engine->cached_const_buffers.end());
+                    memref_args.push_back(MemRefDescriptor(engine->cached_const_buffers[buffer_id]));
+                }
+            }
+            std::vector<void*> args;
+            std::for_each(memref_args.begin(), memref_args.end(), [&args](MemRefDescriptor& x) {
+                x.append_to_packed_args(args);
+            });
+            OPENVINO_MLIR_DEBUG_PRINT("[ DEBUG ] First executon, call fold func\n");
+            engine->folding_info.fold_func(args.data());
+
+            // TODO: Find a better way to check if the op has executed.
+            // This is a const function and can not modify member attributes directly.
+            executed_ops.insert(this);
+        }
+        // call entry()
+        std::vector<MemRefDescriptor> memref_args;
+        // Args of entry(): {non-constant inputs, outputs, folded inputs}.
+        for (auto id : engine->folding_info.compute_args) {
+            // num_orig_args = inputs.size() + outputs.size()
+            // if (id < engine->folding_info.num_orig_args) {
+            if (id < inputs.size()) {  // non-constant input
+                memref_args.push_back(MemRefDescriptor(inputs[id]));
+            } else if (id < engine->folding_info.num_orig_args) {  // output
+                int i = id - inputs.size();                        // output id
+                Shape target;
+                PartialShape expected = get_output_partial_shape(i);
+                for (size_t j = 0; j < expected.size(); ++j) {
+                    auto dim = expected[j];
+                    if (dim.is_dynamic()) {
+                        int input_index, dim_index;
+                        std::tie(input_index, dim_index) = dimensions_map[i][j];
+                        target.push_back(inputs[input_index].get_shape()[dim_index]);
+                    } else {
+                        target.push_back(dim.get_length());
+                    }
+                }
+                // std::cerr << "[ DEBUG ] Set outputs[" << i << "].shape(" << target << ")\n";
+                outputs[i].set_shape(target);
+                memref_args.push_back(MemRefDescriptor(outputs[i]));
+            } else {  // folded input
+                int64_t buffer_id = id - engine->folding_info.num_orig_args;
+                assert(engine->cached_const_buffers.find(buffer_id) != engine->cached_const_buffers.end());
+                memref_args.push_back(MemRefDescriptor(engine->cached_const_buffers[buffer_id]));
             }
         }
-        //std::cerr << "[ DEBUG ] Set outputs[" << i << "].shape(" << target << ")\n";
-        outputs[i].set_shape(target);
-        memref_args.push_back(MemRefDescriptor(outputs[i]));
+
+        std::vector<void*> args;
+        std::for_each(memref_args.begin(), memref_args.end(), [&args](MemRefDescriptor& x) {
+            x.append_to_packed_args(args);
+        });
+        OPENVINO_MLIR_DEBUG_PRINT("[ DEBUG ] Call entry func\n");
+        // std::cerr << "[ INFO ] Running kernel in MLIROp::evaluate\n";
+        return engine->invoke_packed(args);
     }
-    std::vector<void*> args;
-
-    std::for_each(memref_args.begin(), memref_args.end(), [&args](MemRefDescriptor& x) {
-        x.append_to_packed_args(args);
-    });
-
-    //std::cerr << "[ INFO ] Running kernel in MLIROp::evaluate\n";
-    return engine->invoke_packed(args);
 }
 
 bool MLIROp::has_evaluate() const {

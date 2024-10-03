@@ -12,13 +12,13 @@ if (NOT DEFINED GRAPH_COMPILER_LIBS)
         FetchContent_Declare(
                 GC
                 GIT_REPOSITORY https://github.com/intel/graph-compiler.git
-                GIT_TAG main
+                GIT_TAG xgniu/constant_weights_folding # zhicong/perf_test2 # yifei/mlp_benching_new
                 FIND_PACKAGE_ARGS NAMES GraphCompiler
         )
 
         set(GC_ENABLE_OPT OFF)
         set(GC_ENABLE_TEST OFF)
-        set(GC_ENABLE_DNNL OFF)
+        set(GC_ENABLE_DNNL_API OFF)
         set(GC_ENABLE_LEGACY OFF)
         set(GC_ENABLE_BINDINGS_PYTHON OFF)
         set(OV_BUILD_SHARED_LIBS_TMP ${BUILD_SHARED_LIBS})
@@ -31,6 +31,9 @@ if (NOT DEFINED GRAPH_COMPILER_LIBS)
             GcInterface
             GcJitWrapper
             GcCpuRuntime
+            # For some branches:
+            # MLIRCPURuntimeTransforms
+            # MLIRMicrokernelTransforms
     )
     set_property(GLOBAL PROPERTY GRAPH_COMPILER_LIBS ${GRAPH_COMPILER_LIBS})
 endif ()
