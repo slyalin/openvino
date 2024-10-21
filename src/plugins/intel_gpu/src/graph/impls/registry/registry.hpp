@@ -165,6 +165,7 @@ REGISTER_DEFAULT_IMPLS(experimental_detectron_generate_proposals_single_image, O
 REGISTER_DEFAULT_IMPLS(experimental_detectron_prior_grid_generator, OCL_S);
 REGISTER_DEFAULT_IMPLS(experimental_detectron_roi_feature_extractor, OCL_S);
 REGISTER_DEFAULT_IMPLS(experimental_detectron_topk_rois, OCL_S);
+REGISTER_DEFAULT_IMPLS(generic_primitive, OCL_D);
 REGISTER_DEFAULT_IMPLS(gather_elements, OCL_S, OCL_D);
 REGISTER_DEFAULT_IMPLS(generate_proposals, OCL_S);
 REGISTER_DEFAULT_IMPLS(grid_sample, OCL_S);

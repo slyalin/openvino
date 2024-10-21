@@ -3,7 +3,7 @@
 //
 
 #include "generic_primitive_inst.h"
-#include "implementation_map.hpp"
+#include "graph/impls/registry/implementation_map.hpp"
 #include "register.hpp"
 
 #include <vector>
