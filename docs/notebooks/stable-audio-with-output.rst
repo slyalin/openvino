@@ -60,8 +60,7 @@ Guide <https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/README.
 Prerequisites
 -------------
 
->\ **Note**: using python3.8
-can take a long time to resolve dependency conflicts.
+
 
 .. code:: ipython3
 
