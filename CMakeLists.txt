@@ -39,7 +39,7 @@ if(POLICY CMP0149)
     # environment variable. New in 3.27. This is to allow override
     # in the Windows CI builds.
     cmake_policy(SET CMP0149 NEW)
-endif()
+endif() 
 
 project(OpenVINO
         DESCRIPTION "OpenVINO toolkit"
@@ -141,6 +141,11 @@ function(ov_developer_package_export_targets)
         "A list of OpenVINO Developer Package exported targets" FORCE)
 endfunction()
 
+
+#
+# MLIR
+#
+include(cmake/mlir.cmake)
 
 #
 # TPP-MLIR
