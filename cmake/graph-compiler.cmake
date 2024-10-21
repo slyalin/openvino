@@ -13,8 +13,8 @@ if (NOT DEFINED GRAPH_COMPILER_LIBS)
 
         FetchContent_Declare(
                 GC
-                GIT_REPOSITORY https://github.com/slyalin/graph-compiler.git  # FIXME: Revert back to the main repository after fix of llvm fetch
-                GIT_TAG fix_llvm_dir
+                GIT_REPOSITORY https://github.com/intel/graph-compiler.git
+                GIT_TAG main
                 ${GC_FETCH_CONTENT_ARGS}
         )
 
