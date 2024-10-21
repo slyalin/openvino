@@ -13,8 +13,8 @@ if (NOT DEFINED GRAPH_COMPILER_LIBS)
 
         FetchContent_Declare(
                 GC
-                GIT_REPOSITORY https://github.com/intel/graph-compiler.git
-                GIT_TAG main
+                GIT_REPOSITORY https://github.com/slyalin/graph-compiler.git  # FIXME: Revert back to the main repository after fix of llvm fetch
+                GIT_TAG fix_llvm_dir
                 ${GC_FETCH_CONTENT_ARGS}
         )
 
@@ -26,7 +26,24 @@ if (NOT DEFINED GRAPH_COMPILER_LIBS)
         set(GC_ENABLE_BINDINGS_PYTHON OFF)
         set(OV_BUILD_SHARED_LIBS_TMP ${BUILD_SHARED_LIBS})
         set(BUILD_SHARED_LIBS OFF)
+
+        FetchContent_GetProperties(GC)
+        if(NOT GC_POPULATED)
+            FetchContent_Populate(GC)
+        endif()
+
+        # FIXME: Do it correctly as a separate CMake FetchContent inside GC
+        execute_process(
+            COMMAND /bin/bash ./scripts/compile.sh --dev --llvm --imex
+            WORKING_DIRECTORY ${gc_SOURCE_DIR}
+        )
+
+        SET(LLVM_INST_PATH "${gc_SOURCE_DIR}/externals/llvm-project/build")
+        SET(LLVM_DIR "${LLVM_INST_PATH}/lib/cmake/llvm")
+        SET(MLIR_DIR "${LLVM_INST_PATH}/lib/cmake/mlir")
+
         FetchContent_MakeAvailable(GC)
+
         set(BUILD_SHARED_LIBS ${OV_BUILD_SHARED_LIBS_TMP})
     endif ()
 
@@ -45,3 +62,5 @@ endif ()
 
 get_target_property(GRAPH_COMPILER_INCLUDES GcInterface INTERFACE_INCLUDE_DIRECTORIES)
 get_target_property(GRAPH_COMPILER_COMPILE_OPTIONS GcInterface INTERFACE_COMPILE_OPTIONS)
+
+find_package(MLIR REQUIRED CONFIG)

@@ -39,7 +39,7 @@ if(POLICY CMP0149)
     # environment variable. New in 3.27. This is to allow override
     # in the Windows CI builds.
     cmake_policy(SET CMP0149 NEW)
-endif() 
+endif()
 
 project(OpenVINO
         DESCRIPTION "OpenVINO toolkit"
@@ -153,7 +153,8 @@ include(cmake/mlir.cmake)
 
 # enables tpp-mlir for temporary MLIR lowering CPU pipeline
 # FIXME: Move to all-upsteram lowering into XSMM/DNN/MKL
-include(cmake/tpp-mlir.cmake)
+# FIXME: Temporary disabled
+#include(cmake/tpp-mlir.cmake)
 
 #
 # Graph Compiler

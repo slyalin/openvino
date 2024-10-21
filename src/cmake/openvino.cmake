@@ -51,7 +51,7 @@ target_link_libraries(${TARGET_NAME} PRIVATE openvino::reference
                                              ${GRAPH_COMPILER_LIBS}
                                              ${MLIR_ALL_LIBS})
 
-add_tpp_mlir_libs(${TARGET_NAME})
+#add_tpp_mlir_libs(${TARGET_NAME})
 
 
 if (TBBBIND_2_5_FOUND)

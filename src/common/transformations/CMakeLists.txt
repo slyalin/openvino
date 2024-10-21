@@ -43,7 +43,7 @@ target_include_directories(${TARGET_NAME}_obj PRIVATE "${PUBLIC_HEADERS_DIR}"
                                                       "${GRAPH_COMPILER_INCLUDES}")
 
 target_compile_options(${TARGET_NAME}_obj PUBLIC ${GRAPH_COMPILER_COMPILE_OPTIONS})
-add_tpp_mlir_includes(${TARGET_NAME}_obj)
+#add_tpp_mlir_includes(${TARGET_NAME}_obj)
 
 
 ov_add_clang_format_target(${TARGET_NAME}_clang FOR_TARGETS ${TARGET_NAME}_obj)
