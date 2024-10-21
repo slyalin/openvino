@@ -76,5 +76,36 @@ static constexpr Property<bool, PropertyMutability::RO> compiled_model_runtime_p
  */
 static constexpr Property<float, PropertyMutability::RW> query_model_ratio{"QUERY_MODEL_RATIO"};
 
+/**
+ * @brief Namespace for properties related to MLIR operations within the GPU plugin.
+ * These properties are used as evaluation context parameters for MLIR operations,
+ * assisting in managing events, result tracking, and kernel argument types.
+ */
+namespace mlir_meta {
+
+/**
+ * @brief This key identifies a list of cl_event to wait for a kernel execution.
+ * @ingroup ov_dev_api_plugin_mlir_meta_api
+ */
+static constexpr Property<std::vector<void*>> wait_list{"EVENTS_WAIT_LIST"};
+
+/**
+ * @brief This key identifies a pointer to a cl_enevt that should be set with
+ * the result cl_event of a kernel execution. Example:
+ * @code
+ *     cl_event result_event = launchModuleAndGetEvent();
+ *     cl_event* ev = evaluationContext[ov::internal::mlir_meta::result_event.name()].as<void**>();
+ *     *ev = result_event;
+ * @ingroup ov_dev_api_plugin_mlir_meta_api
+ */
+static constexpr Property<void**> result_event{"RESULT_EVENT"};
+
+/**
+ * @brief This key identifies whether the kernel argument at [i] position is USM pointer
+ * @ingroup ov_dev_api_plugin_mlir_meta_api
+ */
+static constexpr Property<std::vector<bool>> is_kernel_arg_usm{"IS_KERNEL_ARG_USM"};
+
+} // namespace mlir_meta
 }  // namespace internal
 }  // namespace ov
