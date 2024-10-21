@@ -41,9 +41,8 @@ if (NOT DEFINED GRAPH_COMPILER_LIBS)
         SET(LLVM_INST_PATH "${gc_SOURCE_DIR}/externals/llvm-project/build")
         SET(LLVM_DIR "${LLVM_INST_PATH}/lib/cmake/llvm")
         SET(MLIR_DIR "${LLVM_INST_PATH}/lib/cmake/mlir")
-
+        add_subdirectory(${gc_SOURCE_DIR} ${gc_BINARY_DIR} EXCLUDE_FROM_ALL)
         FetchContent_MakeAvailable(GC)
-
         set(BUILD_SHARED_LIBS ${OV_BUILD_SHARED_LIBS_TMP})
     endif ()
 
