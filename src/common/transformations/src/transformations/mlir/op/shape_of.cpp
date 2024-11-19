@@ -25,14 +25,9 @@ struct ConvertShapeOf {
         const auto ov_output_element_type = node->get_output_element_type(0);
         const auto ov_output_shape = node->get_output_partial_shape(0);
         const auto input = context.getInputs(node)[0];
-        auto dynamic_dimensions = context.get_dynamic_dimension_values(ov_output_shape);
-        auto outType = importTensor(context.context, ov_output_shape, ov_output_element_type);
-        // importPrecision(context.context, ov_output_element_type) yileds si64 type.
-        // This is incompatible with arith.index_cast. 
         auto shapeOf = builder.create<shape::ShapeOfOp>(loc, mlir::ValueRange{input});
         auto casted_type = RankedTensorType::get(ArrayRef(importShape(ov_output_shape)), importPrecision(context.context, ov_output_element_type));
         auto cast = builder.create<arith::IndexCastOp>(loc, casted_type, mlir::ValueRange{shapeOf});
-        std::cerr << shapeOf->getParentOp() << "\n";
         context.addOutputs(node, cast);
     }
 };
