@@ -75,6 +75,7 @@
 #include "op/matmul.hpp"
 #include "op/relu.hpp"
 #include "op/floor.hpp"
+#include "op/shape_of.hpp"
 #include "op/squeeze.hpp"
 #include "op/binary_eltwise.hpp"
 #include "openvino/core/dimension.hpp"
@@ -314,6 +315,7 @@ void injectMLIR(std::shared_ptr<ov::Model> model,
     manager.register_pass<BinaryEltwisePattern<v1::Divide, linalg::DivOp>>();
     manager.register_pass<ReluPattern>();
     manager.register_pass<FloorPattern>();
+    manager.register_pass<ShapeOfPattern>();
     manager.register_pass<SqueezePattern>();
     manager.register_pass<MatMulPattern>();
     manager.register_pass<Partitioner>(context, mode, loweringContext);
@@ -326,6 +328,7 @@ void loadDialects(MLIRContext* context) {
     context->loadDialect<mlir::func::FuncDialect>();
     context->loadDialect<mlir::linalg::LinalgDialect>();
     context->loadDialect<mlir::bufferization::BufferizationDialect>();
+    context->loadDialect<mlir::shape::ShapeDialect>();
 }
 
 MLIRContext* get_shared_mlir_context(MlirMode mode) {
