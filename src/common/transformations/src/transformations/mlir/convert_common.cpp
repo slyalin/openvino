@@ -78,6 +78,9 @@ Location createLayerLocation(MLIRContext* ctx, const std::string& layerName, con
 }
 
 SmallVector<int64_t> importShape(const ov::PartialShape& shape) {
+    if (shape.rank().is_dynamic()) {
+        OPENVINO_THROW("Dynamic ranks are not supported.");
+    }
     SmallVector<int64_t> out(shape.rank().get_length());
     // TODO: Add support for dynamically ranked shapes
     for (size_t i = 0; i < out.size(); ++i) {
