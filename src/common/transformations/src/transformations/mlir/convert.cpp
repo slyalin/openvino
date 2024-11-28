@@ -72,6 +72,7 @@
 #endif
 
 #include "mlir_op.hpp"
+#include "op/concat.hpp"
 #include "op/matmul.hpp"
 #include "op/relu.hpp"
 #include "op/floor.hpp"
@@ -317,6 +318,7 @@ void injectMLIR(std::shared_ptr<ov::Model> model,
     manager.register_pass<BinaryEltwisePattern<v1::Subtract, linalg::SubOp>>();
     manager.register_pass<BinaryEltwisePattern<v1::Multiply, linalg::MulOp>>();
     manager.register_pass<BinaryEltwisePattern<v1::Divide, linalg::DivOp>>();
+    manager.register_pass<ConcatPattern>();
     manager.register_pass<ReluPattern>();
     manager.register_pass<FloorPattern>();
     manager.register_pass<GatherPattern>();
