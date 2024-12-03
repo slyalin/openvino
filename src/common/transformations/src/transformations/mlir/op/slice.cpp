@@ -38,7 +38,6 @@ struct ConvertSlice {
         auto const_stop = std::dynamic_pointer_cast<ov::op::v0::Constant>(node->get_input_node_shared_ptr(2));
         auto const_step = std::dynamic_pointer_cast<ov::op::v0::Constant>(node->get_input_node_shared_ptr(3));
         if (const_start && const_stop && const_step) {
-            std::cerr << "found a static slice" << std::endl;
             ov::Coordinate coord_start = const_start->get_coordinate_val();
             ov::Coordinate coord_stop = const_stop->get_coordinate_val();
             ov::Coordinate coord_step = const_step->get_coordinate_val();
@@ -46,16 +45,16 @@ struct ConvertSlice {
             SmallVector<int64_t> static_stop(coord_stop.begin(), coord_stop.end());
             SmallVector<int64_t> static_step(coord_step.begin(), coord_step.end());
             SmallVector<int64_t> static_sizes;
-            std::cerr << "static_start.size() == " << static_start.size() << std::endl;
-            std::cerr << "static_stop.size() == " << static_stop.size() << std::endl;
-            std::cerr << "static_step.size() == " << static_step.size() << std::endl;
+            // std::cerr << "static_start.size() == " << static_start.size() << std::endl;
+            // std::cerr << "static_stop.size() == " << static_stop.size() << std::endl;
+            // std::cerr << "static_step.size() == " << static_step.size() << std::endl;
             assert(static_start.size() == static_stop.size() && static_stop.size() == static_step.size());
             for (size_t i = 0; i < static_start.size(); ++i) {
                 static_sizes.push_back(static_stop[i] - static_start[i]);
-                std::cerr << "static_start[" << i << "] = " << static_start[i] << std::endl;
-                std::cerr << "static_sizes[" << i << "] = " << static_sizes[i] << std::endl;
-                std::cerr << "static_step[" << i << "] = " << static_step[i] << std::endl;
-                std::cerr << "static_stop[" << i << "] = " << static_stop[i] << std::endl;
+                // std::cerr << "static_start[" << i << "] = " << static_start[i] << std::endl;
+                // std::cerr << "static_sizes[" << i << "] = " << static_sizes[i] << std::endl;
+                // std::cerr << "static_step[" << i << "] = " << static_step[i] << std::endl;
+                // std::cerr << "static_stop[" << i << "] = " << static_stop[i] << std::endl;
                 assert((static_step[i] > 0) && (static_sizes[i] > 0) && (static_start[i] >= 0));
             }
             auto slice = builder.create<tensor::ExtractSliceOp>(loc, out_type, input, ValueRange{}, ValueRange{}, ValueRange{}, static_start, static_sizes, static_step);
