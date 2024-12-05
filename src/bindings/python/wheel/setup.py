@@ -51,12 +51,14 @@ OPENVINO_PYTHON_BINARY_DIR = os.getenv("OPENVINO_PYTHON_BINARY_DIR", "python_bui
 CONFIG = os.getenv("BUILD_TYPE", "Release")
 OV_RUNTIME_LIBS_DIR = os.getenv("OV_RUNTIME_LIBS_DIR", f"runtime/{LIBS_DIR}/{ARCH}/{CONFIG}")
 TBB_LIBS_DIR = os.getenv("TBB_LIBS_DIR", f"runtime/3rdparty/tbb/{LIBS_DIR}")
+GC_LIBS_DIR  = os.getenv("GC_LIBS_DIR", f"runtime/3rdparty/gc/{LIBS_DIR}")
 PUGIXML_LIBS_DIR = os.getenv("PUGIXML_LIBS_DIR", f"runtime/3rdparty/pugixml/{LIBS_DIR}")
 PY_PACKAGES_DIR = os.getenv("PY_PACKAGES_DIR", "python")
 LIBS_RPATH = "$ORIGIN" if sys.platform == "linux" else "@loader_path"
 PYTHON_EXTENSIONS_ONLY = True if os.getenv("PYTHON_EXTENSIONS_ONLY") is not None else False
 SKIP_RPATH = True if os.getenv("SKIP_RPATH") is not None else False
 CPACK_GENERATOR = os.getenv("CPACK_GENERATOR", "TGZ")
+
 
 LIB_INSTALL_CFG = {
     "ie_libs": {
@@ -295,7 +297,6 @@ class CustomBuild(build):
 
                 # even perform a build in case of binary directory does not exist
                 binary_dir = binary_dir if os.path.isabs(binary_dir) else os.path.join(self.build_temp, binary_dir)
-
                 if not os.path.exists(binary_dir):
                     binary_dir = os.path.join(self.build_temp, binary_dir)
                     self.announce(f"Configuring {comp} cmake project", level=3)
@@ -329,7 +330,6 @@ class CustomBuild(build):
 
         # install python code into a temporary directory (site-packages)
         self.cmake_build_and_install(PY_INSTALL_CFG)
-
         # install clibs into a temporary directory (site-packages)
         if not PYTHON_EXTENSIONS_ONLY:
             self.run_command("build_clib")
@@ -425,7 +425,7 @@ class PrepareLibs(build_clib):
                         self.announce(f"Unlink symlink {symlink}, use {file_dict[real_name]} instead", level=3)
                         os.unlink(symlink)
                 else:
-                    file_dict[real_name] = symlink
+                    file_dict[real_name] = symlink     
 
         # step 2:
         # according to the corresponding relationship (file_dict),
