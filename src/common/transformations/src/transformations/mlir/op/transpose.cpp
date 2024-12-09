@@ -27,11 +27,19 @@ struct ConvertTranspose {
         const auto ov_output_shape = node->get_output_partial_shape(0);
         auto out_type = importTensor(context.context, ov_output_shape, ov_output_element_type);
         auto dynamic_dimensions = context.get_dynamic_dimension_values(ov_output_shape);
+        const auto ov_order_element_type = node->get_input_element_type(1);
 
         auto const_order = dynamic_cast<ov::op::v0::Constant*>(node->get_input_node_ptr(1));
         assert(const_order && "non-const order not supported");
-        ov::Coordinate coords = const_order->get_coordinate_val();
-        SmallVector<int64_t> order(coords.begin(), coords.end());
+        SmallVector<int64_t> order;
+        if (ov_order_element_type == ov::element::i64) {
+            ov::Coordinate coords = const_order->get_coordinate_val();
+            order.assign(coords.begin(), coords.end());
+        } else {
+            assert(ov_order_element_type == ov::element::i32);
+            std::vector<int32_t> coords = const_order->get_vector<int32_t>();
+            order.assign(coords.begin(), coords.end());
+        }
 
         auto empty = builder.create<tensor::EmptyOp>(loc, out_type, dynamic_dimensions);
         auto transpose = builder.create<linalg::TransposeOp>(loc, input, empty, order);
