@@ -855,7 +855,9 @@ void TransformationsPipeline::apply(std::shared_ptr<ov::Model> func) {
             // actual device will be extracted later by the 'mlir_op'.
             loweringContext->insert(ov::intel_gpu::ocl_context(it->second.as<ov::intel_gpu::gpu_handle_param>()));
         }
+        pass::VisualizeTree("/home/jovyan/openvino/before.svg").run_on_model(func);
         ov::pass::transformMLIR(func, loweringContext);
+        pass::VisualizeTree("/home/jovyan/openvino/after.svg").run_on_model(func);
 
         // This is supposed to be the last pass to ensure that we don't have name collisions until
         // GPU plugin stops using friendly names for program creation
