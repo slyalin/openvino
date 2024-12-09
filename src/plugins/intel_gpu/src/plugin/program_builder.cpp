@@ -344,6 +344,7 @@ void ProgramBuilder::add_primitive(const ov::Node& op, std::shared_ptr<cldnn::pr
 }
 
 bool ProgramBuilder::requires_new_shape_infer(const std::shared_ptr<ov::Node>& op) const {
+    return true;
     if (op->is_dynamic()) {
         return true;
     }
