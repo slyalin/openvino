@@ -340,6 +340,15 @@ MLIREvaluateGcGPU::MLIREvaluateGcGPU(OwningOpRef<mlir::ModuleOp> _module, std::s
 
     gc::gpu::OclModuleBuilderOpts opts;
     OPENVINO_MLIR_DEBUG(opts.printIr = true);
+#ifdef MLIR_RUNNER_UTILS_PATH
+    #define STRINGIFY(x) #x
+    #define TOSTRING(x) STRINGIFY(x)
+    #define MLIR_RUNNER_UTILS_SO TOSTRING(MLIR_RUNNER_UTILS_PATH) "/libmlir_runner_utils.so"
+    #define MLIR_C_RUNNER_UTILS_SO TOSTRING(MLIR_RUNNER_UTILS_PATH) "/libmlir_c_runner_utils.so"
+    SmallVector<StringRef, 2> shared_libs({MLIR_RUNNER_UTILS_SO, MLIR_C_RUNNER_UTILS_SO});
+    opts.sharedLibPaths = shared_libs;
+#endif
+    
     gc::gpu::OclModuleBuilder builder(std::move(_module), opts);
 
     auto it = loweringContext->find(ov::intel_gpu::ocl_context.name());
