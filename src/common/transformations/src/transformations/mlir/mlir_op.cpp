@@ -343,7 +343,7 @@ MLIREvaluateGcGPU::MLIREvaluateGcGPU(OwningOpRef<mlir::ModuleOp> _module, std::s
     gc::gpu::OclModuleBuilderOpts opts;
     SmallVector<StringRef, 2> shared_libs({"/home/jovyan/openvino/install/lib/libimex_runner_utils.so", "/home/jovyan/graph-compiler/externals/llvm-project/build/lib/libmlir_c_runner_utils.so"});
     opts.sharedLibPaths = shared_libs;
-    opts.dumpSpirv = util::getenv_bool("OV_GC_DUMP_SPIRV", false);
+    opts.spirvDump = util::getenv_bool("OV_GC_DUMP_SPIRV", false);
 
     OPENVINO_MLIR_DEBUG(opts.printIr = true);
     gc::gpu::OclModuleBuilder builder(std::move(_module), opts);
