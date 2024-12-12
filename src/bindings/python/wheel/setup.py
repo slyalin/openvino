@@ -127,7 +127,8 @@ LIB_INSTALL_CFG = {
     "gc_libs": {
         "name": "GcCpuRuntime",
         "prefix": f"{BUILD_BASE}/libs.gc",
-        "install_dir": GC_LIBS_DIR,
+        "install_dir": OV_RUNTIME_LIBS_DIR,
+        "rpath": LIBS_RPATH,
         "binary_dir": OPENVINO_BINARY_DIR,
     },
     "pugixml_libs": {
