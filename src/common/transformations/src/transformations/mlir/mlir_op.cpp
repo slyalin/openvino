@@ -340,6 +340,7 @@ MLIREvaluateGcGPU::MLIREvaluateGcGPU(OwningOpRef<mlir::ModuleOp> _module, std::s
 
     gc::gpu::OclModuleBuilderOpts opts;
     OPENVINO_MLIR_DEBUG(opts.printIr = true);
+    OPENVINO_MLIR_DEBUG(opts.spirvDump = true);
 #ifdef MLIR_RUNNER_UTILS_PATH
     #define STRINGIFY(x) #x
     #define TOSTRING(x) STRINGIFY(x)
