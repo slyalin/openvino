@@ -61,13 +61,15 @@ struct ConvertGather {
         auto empty_add = builder.create<tensor::EmptyOp>(loc, indices_expanded.getType(), dynamic_index_dims);
         auto add = builder.create<linalg::AddOp>(loc, mlir::ValueRange{cast.getResult(), indices_expanded}, mlir::ValueRange{empty_add});
         auto select = builder.create<linalg::SelectOp>(loc, mlir::ValueRange{cmpi.getResult(), add.getResult(0), indices_expanded}, mlir::ValueRange{empty_add});
+        auto index_type = RankedTensorType::get(ArrayRef(importShape(ov_output_shape)), builder.getIndexType());
+        auto cast2 = builder.create<arith::IndexCastOp>(loc, index_type, mlir::ValueRange{select.getResult(0)});
 
         auto gather_node = std::dynamic_pointer_cast<ov::op::util::GatherBase>(node);
         assert(gather_node && "Expected a gather node");
         int64_t axis = gather_node->get_axis();
 
         llvm::SmallVector<int64_t> gather_dims{axis};
-        auto gather = builder.create<tensor::GatherOp>(loc, out_type, input, select.getResult(0), gather_dims, false);
+        auto gather = builder.create<tensor::GatherOp>(loc, out_type, input, cast2, gather_dims, false);
         context.addOutputs(node, gather);
     }
 };
