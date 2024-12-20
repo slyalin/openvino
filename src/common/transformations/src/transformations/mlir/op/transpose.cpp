@@ -31,15 +31,8 @@ struct ConvertTranspose {
 
         auto const_order = dynamic_cast<ov::op::v0::Constant*>(node->get_input_node_ptr(1));
         assert(const_order && "non-const order not supported");
-        SmallVector<int64_t> order;
-        if (ov_order_element_type == ov::element::i64) {
-            ov::Coordinate coords = const_order->get_coordinate_val();
-            order.assign(coords.begin(), coords.end());
-        } else {
-            assert(ov_order_element_type == ov::element::i32);
-            std::vector<int32_t> coords = const_order->get_vector<int32_t>();
-            order.assign(coords.begin(), coords.end());
-        }
+        std::vector<int64_t> coords = const_order->cast_vector<int64_t>();
+        SmallVector<int64_t> order(coords.begin(), coords.end());
 
         auto empty = builder.create<tensor::EmptyOp>(loc, out_type, dynamic_dimensions);
         auto transpose = builder.create<linalg::TransposeOp>(loc, input, empty, order);
