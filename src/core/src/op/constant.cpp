@@ -324,7 +324,8 @@ Constant::Constant(const Constant& other)
       m_data{other.m_data},
       m_all_elements_bitwise_identical{other.m_all_elements_bitwise_identical.load()},
       m_all_elements_bitwise_identical_checked{other.m_all_elements_bitwise_identical_checked.load()},
-      m_alloc_buffer_on_visit_attributes{other.m_alloc_buffer_on_visit_attributes} {
+      m_alloc_buffer_on_visit_attributes{other.m_alloc_buffer_on_visit_attributes},
+      m_external_name{other.m_external_name} {
     constructor_validate_and_infer_types();
 }
 
@@ -591,32 +592,46 @@ bool Constant::visit_attributes(AttributeVisitor& visitor) {
     OV_OP_SCOPE(v0_Constant_visit_attributes);
     const auto prev_shape = m_shape;
     const auto prev_type = m_element_type;
+    const auto prev_external_name = m_external_name;
     visitor.on_attribute("element_type", m_element_type);
     visitor.on_attribute("shape", m_shape);
+    visitor.on_attribute("external_name", m_external_name);
 
-    const auto need_to_reallocate = (m_shape != prev_shape) || (prev_type != m_element_type);
-    const auto is_string_constant = (m_element_type == element::string);
-    if (m_alloc_buffer_on_visit_attributes && need_to_reallocate) {
-        // string objects initialization is required, others filling in a fresh constant
-        allocate_buffer(is_string_constant);
-    }
-
-    if (is_string_constant) {
-        if (auto string_aligned_buffer = std::dynamic_pointer_cast<ov::StringAlignedBuffer>(m_data)) {
-            visitor.on_attribute("value", string_aligned_buffer);
-        } else if (auto shared_string_tensor = std::dynamic_pointer_cast<ov::SharedBuffer<ov::Tensor>>(m_data)) {
-            auto shared_string_buffer =
-                std::make_shared<ov::SharedStringAlignedBuffer>(shared_string_tensor->get_ptr<char>(),
-                                                                shared_string_tensor->size());
-            visitor.on_attribute("value", shared_string_buffer);
+    if(!m_external_name.empty()) {
+        if(prev_external_name != m_external_name) {
+            // If it becomes an external constant or change it's content, it is unlinked
+            std::cerr << "[ DEBUG ] ExternalConstant in Constant::visit_attributes is activated" << std::endl;
+            m_data.reset();
         } else {
-            // deserialization case when buffer does not exist yet
-            std::shared_ptr<ov::StringAlignedBuffer> string_aligned_buffer;
-            visitor.on_attribute("value", string_aligned_buffer);
-            m_data = string_aligned_buffer;
+            std::cerr << "[ DEBUG ] Retriving value from Constant::visit_attributes" << std::endl;
+            std::cerr << "          m_external_name = " << m_external_name << std::endl;
+            std::cerr << "          Skip value retrieving" << std::endl;
         }
     } else {
-        visitor.on_attribute("value", m_data);
+        const auto need_to_reallocate = (m_shape != prev_shape) || (prev_type != m_element_type);
+        const auto is_string_constant = (m_element_type == element::string);
+        if (m_alloc_buffer_on_visit_attributes && need_to_reallocate) {
+            // string objects initialization is required, others filling in a fresh constant
+            allocate_buffer(is_string_constant);
+        }
+
+        if (is_string_constant) {
+            if (auto string_aligned_buffer = std::dynamic_pointer_cast<ov::StringAlignedBuffer>(m_data)) {
+                visitor.on_attribute("value", string_aligned_buffer);
+            } else if (auto shared_string_tensor = std::dynamic_pointer_cast<ov::SharedBuffer<ov::Tensor>>(m_data)) {
+                auto shared_string_buffer =
+                    std::make_shared<ov::SharedStringAlignedBuffer>(shared_string_tensor->get_ptr<char>(),
+                                                                    shared_string_tensor->size());
+                visitor.on_attribute("value", shared_string_buffer);
+            } else {
+                // deserialization case when buffer does not exist yet
+                std::shared_ptr<ov::StringAlignedBuffer> string_aligned_buffer;
+                visitor.on_attribute("value", string_aligned_buffer);
+                m_data = string_aligned_buffer;
+            }
+        } else {
+            visitor.on_attribute("value", m_data);
+        }
     }
     update_identical_flags(false, false);
     return true;

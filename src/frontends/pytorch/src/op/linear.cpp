@@ -31,11 +31,28 @@ OutputVector translate_linear(const NodeContext& context) {
     return {matmul};
 };
 
+std::string demangle_dict_state_name(const std::string& name) {
+    const std::string prefix = "self.";
+    if (name.rfind(prefix, 0) == 0) {
+        return name.substr(prefix.size());
+    }
+    FRONT_END_OP_CONVERSION_CHECK(false, "Name does not start with 'self.' prefix: " + name);
+}
+
 OutputVector translate_linear_ext(const NodeContext& context) {
     num_inputs_check(context, 2, 3);
+    // std::cerr << "[ DEBUG ] translate_linear_ext" << std::endl;
     auto x = context.get_input(0);
     auto initial_x = x;
     auto weight = context.get_input(1);
+    auto weight_node = weight.get_node_shared_ptr();
+    std::cerr << "[ DEBUG ] Name of weight layer:  " << weight_node->get_friendly_name() << std::endl;
+    // std::cerr << "[ DEBUG ] Name of weight tensor: " << weight.get_any_name() << std::endl;
+    if (auto constant_node = ov::as_type_ptr<v0::Constant>(weight_node)) {
+        auto name = demangle_dict_state_name(weight_node->get_friendly_name());
+        std::cerr << "    [ DEBUG ] Set external constant name: " << name << std::endl;
+        constant_node->set_external_name(name);
+    }
     bool convert_back = false;
     if (weight.get_element_type() != element::f32) {
         // In case of patched linear it can have mixed fp16/bf16 and fp32 input type.
@@ -48,8 +65,14 @@ OutputVector translate_linear_ext(const NodeContext& context) {
         }
     }
     auto matmul = context.mark_node(std::make_shared<v0::MatMul>(x, weight, false, true));
+    // std::cerr << "[ DEBUG ] Name of matmul layer: " << matmul->get_friendly_name() << std::endl;
     if (!context.input_is_none(2)) {
+        std::cerr << "[ DEBUG ] There is bias addon" << std::endl;
         auto bias = context.get_input(2);
+
+        auto bias_node = weight.get_node_shared_ptr();
+        std::cerr << "[ DEBUG ] Name of bias layer:  " << bias_node->get_friendly_name() << std::endl;
+
 
         if (bias.get_element_type() != element::f32) {
             // Same reason as for weight.

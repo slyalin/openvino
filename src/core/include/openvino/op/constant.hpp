@@ -439,6 +439,18 @@ public:
     /// @return Constant's strides in bytes.
     const Strides& get_strides() const;
 
+    /// @brief Sets the external name for the constant.
+    /// @param name The external name to set.
+    void set_external_name(const std::string& name) {
+        m_external_name = name;
+    }
+
+    /// @brief Gets the external name of the constant.
+    /// @return The external name.
+    const std::string& get_external_name() const {
+        return m_external_name;
+    }
+
 private:
     Constant(bool memset_allocation, const element::Type& type, const Shape& shape);
 
@@ -796,6 +808,9 @@ private:
     mutable std::atomic_bool m_all_elements_bitwise_identical{false};
     mutable std::atomic_bool m_all_elements_bitwise_identical_checked{false};
     bool m_alloc_buffer_on_visit_attributes{true};
+
+    // TODO: Move to dedicated ExternalConstant op:
+    std::string m_external_name;
 };
 
 template <>

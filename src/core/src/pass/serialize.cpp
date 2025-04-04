@@ -582,6 +582,8 @@ public:
         } else if (const auto& a = ov::as_type<ov::AttributeAdapter<std::shared_ptr<ov::AlignedBuffer>>>(&adapter)) {
             if (name == "value" && translate_type_name(m_node_type_name) == "Const") {
                 const int64_t size = a->get()->size();
+                if(size > 100000)
+                    std::cerr << "[ DEBUG ] SERIALIZE value of big size: " << size << std::endl;
                 size_t new_size;
                 int64_t offset = m_constant_write_handler.write(static_cast<const char*>(a->get()->get_ptr()),
                                                                 size,
@@ -1010,6 +1012,9 @@ void ngfunction_2_ir(pugi::xml_node& netXml,
 
     auto sorted_ops = model.get_ordered_ops();
 
+    int iii = 0;
+    std::cerr << "DEBUG " << iii++ << std::endl;
+
     // get_ordered_ops() returns operations after a topological sort. The topological sort reverses order of Parameters
     // and Results. So we need to put them into sorted_ops separately to ensure correct order of inputs and outputs.
     {
@@ -1033,7 +1038,12 @@ void ngfunction_2_ir(pugi::xml_node& netXml,
         sorted_ops = std::move(result);
     }
 
+    std::cerr << "DEBUG " << iii++ << std::endl;
+    int jjj = 0;
+
     for (const auto& n : sorted_ops) {
+
+        std::cerr << jjj++ << std::endl;
         ov::Node* node = n.get();
         int node_id{};
         {
@@ -1214,6 +1224,8 @@ void ngfunction_2_ir(pugi::xml_node& netXml,
             layer.remove_child(data);
         }
     }
+    std::cerr << "DEBUG " << iii++ << std::endl;
+
     // <edges>
     const std::vector<Edge> edge_mapping = create_edge_mapping(layer_ids, model);
     pugi::xml_node edges = netXml.append_child("edges");
@@ -1233,6 +1245,7 @@ void ngfunction_2_ir(pugi::xml_node& netXml,
         edge.append_attribute("to-port").set_value(e.to_port);
     }
 
+    std::cerr << "DEBUG " << iii++ << std::endl;
     // Serialize rt info
     pugi::xml_node rt_info_node = netXml.append_child("rt_info");
     for (const auto& it : model.get_rt_info()) {
@@ -1241,6 +1254,7 @@ void ngfunction_2_ir(pugi::xml_node& netXml,
             continue;
         serialize_rt_info(rt_info_node, it.first, it.second);
     }
+    std::cerr << "DEBUG " << iii++ << std::endl;
 }
 
 std::string valid_xml_path(const std::string& path) {
