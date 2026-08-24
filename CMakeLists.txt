@@ -1,163 +1,222 @@
-# Copyright (C) 2018-2020 Intel Corporation
+# Copyright (C) 2018-2026 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 #
 
-cmake_policy(SET CMP0054 NEW)
+# 3.26 is required by the bundled ONNX version.
+cmake_minimum_required(VERSION 3.26)
 
-# TODO: for make instal / package we need to use 3.13.3 version because
-# it allows to install targets created outside of current projects
-# See https://blog.kitware.com/cmake-3-13-0-available-for-download/
-
-if (APPLE)
-    if(CMAKE_GENERATOR STREQUAL "Xcode")
-        # due to https://gitlab.kitware.com/cmake/cmake/issues/14254
-        cmake_minimum_required(VERSION 3.12.0 FATAL_ERROR)
-    else()
-        # due to https://cmake.org/cmake/help/v3.12/policy/CMP0068.html
-        cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
-    endif()
-else()
-    cmake_minimum_required(VERSION 3.7.2 FATAL_ERROR)
+if(POLICY CMP0091)
+    cmake_policy(SET CMP0091 NEW) # Enables use of MSVC_RUNTIME_LIBRARY
 endif()
 
-project(OpenVINO)
+# Avoid warning about DOWNLOAD_EXTRACT_TIMESTAMP in CMake 3.24:
+if(POLICY CMP0135)
+    cmake_policy(SET CMP0135 NEW)
+endif()
 
-set(OpenVINO_MAIN_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(IE_MAIN_SOURCE_DIR ${OpenVINO_MAIN_SOURCE_DIR}/inference-engine)
-list(APPEND CMAKE_MODULE_PATH "${OpenVINO_MAIN_SOURCE_DIR}/cmake")
+if(POLICY CMP0149)
+    # VS generator looks for most recent Windows SDK, ignoring
+    # CMAKE_SYSTEM_VERSION and allowing override by WindowsSDKVersion
+    # environment variable. New in 3.27. This is to allow override
+    # in the Windows CI builds.
+    cmake_policy(SET CMP0149 NEW)
+endif()
 
-include(CTest)
-include(features)
+if(POLICY CMP0177)
+    # install() DESTINATION paths are normalized.
+    cmake_policy(SET CMP0177 NEW)
+endif()
 
-# include developer package
-include(developer_package)
+if(POLICY CMP0194)
+    # NOTE: Keeping the policy "OLD" in order to retain custom assembler search (icpx/icx/icx.exe)
+    # Making it "NEW" would result in (incorrect) usage of cl64.exe in certain contexts on Windows
+    set(CMAKE_POLICY_DEFAULT_CMP0194 OLD)
+    # NOTE: Some CMake versions have a typo in the policy number, so we set both to be safe
+    set(CMAKE_POLICY_DEFAULT_CMP194 OLD)
+endif()
 
-# These options are shared with 3rdparty plugins
-# by means of developer package
-include(check_features)
-include(dependencies)
+# set CMAKE_POLICY_VERSION_MINIMUM to avoid errors from 3rd party dependencies
+# after cmake is updated to 4.0
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+
+project(OpenVINO
+        DESCRIPTION "OpenVINO toolkit"
+        HOMEPAGE_URL "https://docs.openvino.ai/2026/index.html"
+        LANGUAGES C CXX)
+
+find_package(OpenVINODeveloperScripts REQUIRED
+             PATHS "${OpenVINO_SOURCE_DIR}/cmake/developer_package"
+             NO_CMAKE_FIND_ROOT_PATH
+             NO_DEFAULT_PATH)
+
+include(cmake/features.cmake)
+
+# These options are shared with 3rdparty plugins by means of developer package
+include(cmake/dependencies.cmake)
+
+if(ENABLE_COVERAGE)
+    include(cmake/coverage.cmake)
+endif()
+
+if(APPLE AND CMAKE_OSX_DEPLOYMENT_TARGET AND
+    CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS 10.15)
+    message(FATAL_ERROR "OpenVINO requires MACOSX_DEPLOYMENT_TARGET at least 10.15, specified ${CMAKE_OSX_DEPLOYMENT_TARGET}")
+endif()
 
 # resolving dependencies for the project
-message (STATUS "PROJECT ............................... " ${PROJECT_NAME})
-message (STATUS "CMAKE_BINARY_DIR ...................... " ${CMAKE_BINARY_DIR})
-message (STATUS "OpenVINO_MAIN_SOURCE_DIR .............. " ${OpenVINO_MAIN_SOURCE_DIR})
-message (STATUS "IE_MAIN_SOURCE_DIR .................... " ${IE_MAIN_SOURCE_DIR})
+message (STATUS "CMAKE_VERSION ......................... " ${CMAKE_VERSION})
+message (STATUS "CMAKE_CROSSCOMPILING .................. " ${CMAKE_CROSSCOMPILING})
+message (STATUS "OpenVINO_SOURCE_DIR ................... " ${OpenVINO_SOURCE_DIR})
+message (STATUS "OpenVINO_BINARY_DIR ................... " ${OpenVINO_BINARY_DIR})
 message (STATUS "CMAKE_GENERATOR ....................... " ${CMAKE_GENERATOR})
+message (STATUS "CPACK_GENERATOR ....................... " ${CPACK_GENERATOR})
 message (STATUS "CMAKE_C_COMPILER_ID ................... " ${CMAKE_C_COMPILER_ID})
-message (STATUS "CMAKE_BUILD_TYPE ...................... " ${CMAKE_BUILD_TYPE})
+message (STATUS "CMAKE_CXX_COMPILER_ID ................. " ${CMAKE_CXX_COMPILER_ID})
+message (STATUS "CMAKE_CXX_STANDARD .................... " ${CMAKE_CXX_STANDARD})
+if(OV_GENERATOR_MULTI_CONFIG)
+    string(REPLACE ";" " " config_types "${CMAKE_CONFIGURATION_TYPES}")
+    message (STATUS "CMAKE_CONFIGURATION_TYPES ............. " ${config_types})
+    unset(config_types)
+    if(CMAKE_GENERATOR STREQUAL "Ninja Multi-Config")
+        message (STATUS "CMAKE_DEFAULT_BUILD_TYPE .............. " ${CMAKE_DEFAULT_BUILD_TYPE})
+    endif()
+else()
+    message (STATUS "CMAKE_BUILD_TYPE ...................... " ${CMAKE_BUILD_TYPE})
+endif()
+if(CMAKE_GENERATOR_PLATFORM)
+    message (STATUS "CMAKE_GENERATOR_PLATFORM .............. " ${CMAKE_GENERATOR_PLATFORM})
+endif()
+if(CMAKE_GENERATOR_TOOLSET)
+    message (STATUS "CMAKE_GENERATOR_TOOLSET ............... " ${CMAKE_GENERATOR_TOOLSET})
+endif()
+if(CMAKE_TOOLCHAIN_FILE)
+    message (STATUS "CMAKE_TOOLCHAIN_FILE .................. " ${CMAKE_TOOLCHAIN_FILE})
+endif()
+if(NOT OV_LIBC_VERSION VERSION_EQUAL 0.0)
+    message (STATUS "LIBC_VERSION .......................... " ${OV_LIBC_VERSION})
+endif()
+if(DEFINED OPENVINO_STDLIB)
+    message (STATUS "STDLIB ................................ " ${OPENVINO_STDLIB})
+endif()
 
-# remove file with exported developer targets to force its regeneration
-file(REMOVE "${CMAKE_BINARY_DIR}/targets_developer.cmake")
-file(REMOVE "${CMAKE_BINARY_DIR}/targets.cmake")
+# remove file with exported targets to force its regeneration
+file(REMOVE "${CMAKE_BINARY_DIR}/OpenVINOTargets.cmake")
 
-function(build_ngraph)
-    function(ngraph_set option value)
-        if(NOT DEFINED ${option})
-            set(${option} ${value} CACHE BOOL "" FORCE)
+# remove exported developer targets files to force its regeneration
+macro(ov_clean_developer_package_targets)
+    file(REMOVE "${CMAKE_BINARY_DIR}/openvino_developer_package_targets.cmake")
+    unset(_OPENVINO_DEVELOPER_PACKAGE_TARGETS CACHE)
+    unset(openvino_installed_targets CACHE)
+endmacro()
+ov_clean_developer_package_targets()
+
+function(ov_developer_package_export_targets)
+    cmake_parse_arguments(EXPORT "" "TARGET;INSTALL_DESTIONATION" "INSTALL_INCLUDE_DIRECTORIES" ${ARGN})
+
+    # to allow exporting of aliased targets with the original names
+    if(TARGET "${EXPORT_TARGET}")
+        get_target_property(original_name ${EXPORT_TARGET} ALIASED_TARGET)
+        if(TARGET "${original_name}")
+            # replace target with its original name
+            set(EXPORT_TARGET ${original_name})
         endif()
-    endfunction()
+        list(APPEND _OPENVINO_DEVELOPER_PACKAGE_TARGETS ${EXPORT_TARGET})
 
-    set(NGRAPH_BUILD_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} CACHE STRING "" FORCE)
-    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${OpenVINO_MAIN_SOURCE_DIR}/ngraph/cmake/Modules/")
+        if(EXPORT_INSTALL_INCLUDE_DIRECTORIES)
+            if(NOT EXPORT_INSTALL_DESTIONATION)
+                set(EXPORT_INSTALL_DESTIONATION "developer_package/include/${EXPORT_TARGET}")
+            endif()
 
-    if (ENABLE_SANITIZER)
-        ngraph_set(NGRAPH_ADDRESS_SANITIZER TRUE)
-    else ()
-        ngraph_set(NGRAPH_ADDRESS_SANITIZER FALSE)
-    endif ()
-    ngraph_set(NGRAPH_PYTHON_BUILD_ENABLE FALSE)
-    if (NOT ANDROID)
-        if(ENABLE_TESTS)
-            ngraph_set(NGRAPH_UNIT_TEST_ENABLE TRUE)
-            ngraph_set(NGRAPH_IE_ENABLE TRUE)
-        else()
-            ngraph_set(NGRAPH_UNIT_TEST_ENABLE FALSE)
-            ngraph_set(NGRAPH_IE_ENABLE FALSE)
+            target_include_directories(${EXPORT_TARGET} INTERFACE "$<INSTALL_INTERFACE:${EXPORT_INSTALL_DESTIONATION}>")
+
+            foreach(install_dir IN LISTS EXPORT_INSTALL_INCLUDE_DIRECTORIES)
+                install(DIRECTORY "${install_dir}"
+                        DESTINATION "${EXPORT_INSTALL_DESTIONATION}"
+                        COMPONENT developer_package EXCLUDE_FROM_ALL)
+            endforeach()
         endif()
-        ngraph_set(NGRAPH_ONNX_IMPORT_ENABLE TRUE)
     else()
-        ngraph_set(NGRAPH_UNIT_TEST_ENABLE FALSE)
-        ngraph_set(NGRAPH_TEST_UTIL_ENABLE FALSE)
-        ngraph_set(NGRAPH_IE_ENABLE FALSE)
-        ngraph_set(NGRAPH_ONNX_IMPORT_ENABLE FALSE)
-    endif()
-    ngraph_set(NGRAPH_INTERPRETER_ENABLE TRUE)
-
-    if(CMAKE_CXX_COMPILER_ID MATCHES "^(Apple)?Clang$")
-        ie_add_compiler_flags(-Wno-error=uninitialized -Wno-error=literal-conversion)
-    elseif(UNIX)
-        ie_add_compiler_flags(-Wno-error=maybe-uninitialized -Wno-error=return-type -fPIC)
-    endif()
-    if(ANDROID)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=defaulted-function-deleted -Wno-error=unused-command-line-argument")
+        message(FATAL_ERROR "Internal error: '${EXPORT_TARGET}' does not represent a cmake target")
     endif()
 
-    # WA for GCC 7.0
-    if (UNIX)
-        ie_add_compiler_flags(-Wno-error=return-type -Wno-undef)
-    elseif(WIN32)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4308 /wd4146 /wd4703 /wd4244")
-    endif()
-
-    if(ENABLE_LTO)
-        ie_enable_lto()
-    endif()
-
-    ie_cpack_add_component(ngraph)
-
-    set(SDL_cmake_included ON)
-    # set(NGRAPH_COMPONENT_PREFIX "deployment_tools/ngraph/")
-    add_subdirectory(ngraph)
-    set(NGRAPH_LIBRARIES ngraph PARENT_SCOPE)
+    list(REMOVE_DUPLICATES _OPENVINO_DEVELOPER_PACKAGE_TARGETS)
+    set(_OPENVINO_DEVELOPER_PACKAGE_TARGETS "${_OPENVINO_DEVELOPER_PACKAGE_TARGETS}" CACHE INTERNAL
+        "A list of OpenVINO Developer Package exported targets" FORCE)
 endfunction()
 
-build_ngraph()
+#
+# Build
+#
 
-add_subdirectory(inference-engine)
+# Configure job pools (only for Ninja generators)
+if(CMAKE_GENERATOR STREQUAL "Ninja" OR CMAKE_GENERATOR STREQUAL "Ninja Multi-Config")
+    # Because we use Ninja generator, we can set the number of parallel
+    # jobs separately for different tasks, like compiling and linking.
+    # Especially useful on Windows, we avoid to be out of memory during linking stage that way.
+    # Number of jobs will never exceed the amount passed in `--parallel` to `cmake --build` command,
+    # even if larger `JOB_POOL` specified.
+    # See also: https://cmake.org/cmake/help/latest/prop_gbl/JOB_POOLS.html
 
+    # Set default job pools.
+    # `four_jobs` is used in a few places across all CMake files to limit
+    # the number of concurrent jobs (e.g. to convert *.prototxt files
+    # in cmake/test_model_zoo.cmake:54).
+    set_property(GLOBAL PROPERTY JOB_POOLS "${CMAKE_JOB_POOLS};four_jobs=4")
+
+    if(CMAKE_JOB_POOLS)
+        message(STATUS "")
+        message(STATUS "Job pools configuration for Ninja generator:")
+        get_property(current_job_pools GLOBAL PROPERTY JOB_POOLS)
+        message(STATUS "CMAKE_JOB_POOLS is set to: ${CMAKE_JOB_POOLS}")
+        message(STATUS "JOB_POOLS global property is set to: ${current_job_pools}")
+
+        if(CMAKE_JOB_POOL_COMPILE)
+            message(STATUS "CMAKE_JOB_POOL_COMPILE is set to: ${CMAKE_JOB_POOL_COMPILE}")
+        endif()
+
+        if(CMAKE_JOB_POOL_LINK)
+            message(STATUS "CMAKE_JOB_POOL_LINK is set to: ${CMAKE_JOB_POOL_LINK}")
+        endif()
+
+        if(CMAKE_JOB_POOL_PRECOMPILE_HEADER)
+            message(STATUS "CMAKE_JOB_POOL_PRECOMPILE_HEADER is set to: ${CMAKE_JOB_POOL_PRECOMPILE_HEADER}")
+        endif()
+    endif()
+endif()
+
+if(ENABLE_TESTS)
+    # add target with processed tests model zoo
+    include(cmake/test_model_zoo.cmake)
+endif()
+
+include(thirdparty/dependencies.cmake)
+add_subdirectory(src)
+
+if(ENABLE_SAMPLES OR ENABLE_TESTS)
+    add_subdirectory(samples)
+endif()
+
+# Enable interpreter backend for tests
+if(ENABLE_TESTS OR ENABLE_TEMPLATE)
+    add_subdirectory(src/plugins/template/backend)
+endif()
+
+include(cmake/extra_modules.cmake)
 add_subdirectory(docs)
+add_subdirectory(tools)
+add_subdirectory(scripts)
+add_subdirectory(licensing)
 
-# cpack
-
-# install setupvars
-
-ie_cpack_add_component(setupvars REQUIRED)
-
-if(UNIX)
-    install(PROGRAMS scripts/setupvars/setupvars.sh
-            DESTINATION bin
-            COMPONENT setupvars)
-elseif(WIN32)
-    install(PROGRAMS scripts/setupvars/setupvars.bat
-            DESTINATION bin
-            COMPONENT setupvars)
+if(ENABLE_TESTS)
+    # layers and other more high-level / e2e tests
+    add_subdirectory(tests)
 endif()
 
-# install install_dependencies
+#
+# CPack
+#
 
-if(UNIX)
-    ie_cpack_add_component(install_dependencies REQUIRED)
-    install(DIRECTORY scripts/install_dependencies/
-            DESTINATION install_dependencies
-            COMPONENT install_dependencies)
-endif()
+# provides a callback function to describe each component in repo
+include(cmake/packaging/packaging.cmake)
 
-# install files for demo
-
-ie_cpack_add_component(demo_scripts REQUIRED DEPENDS core)
-
-if(UNIX)
-    install(DIRECTORY scripts/demo/
-            DESTINATION deployment_tools/demo
-            COMPONENT demo_scripts
-            USE_SOURCE_PERMISSIONS
-            PATTERN *.bat EXCLUDE)
-elseif(WIN32)
-    install(DIRECTORY scripts/demo/
-            DESTINATION deployment_tools/demo
-            COMPONENT demo_scripts
-            USE_SOURCE_PERMISSIONS
-            PATTERN *.sh EXCLUDE)
-endif()
-
-ie_cpack(${IE_CPACK_COMPONENTS_ALL})
+ov_cpack(${OV_CPACK_COMPONENTS_ALL})

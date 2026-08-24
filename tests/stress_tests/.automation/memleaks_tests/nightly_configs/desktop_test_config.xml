@@ -1,22 +1,47 @@
-<?xml version="1.0"?>
-<attributes>
-<!--[ WARNING ] Use of attribute "processes" from config isn't implemented yet. It will be ignored.-->
-    <processes>
-        <value>1</value>
-    </processes>
-    <threads>
-        <value>1</value>
-    </threads>
-    <iterations>
-        <value>1000</value>
-    </iterations>
-    <devices>
-        <value>CPU</value>
-        <value>GPU</value>
-    </devices>
-    <models>
-        <value>public/alexnet/FP32/alexnet.xml</value>
-        <value>public/mobilenet-ssd/FP32/mobilenet-ssd.xml</value>
-        <value>public/mtcnn/mtcnn-r/FP32/mtcnn-r.xml</value>
-    </models>
-</attributes>
+<cases>
+
+    <device name="CPU" iterations="1000" processes="1" threads="1">
+        <model name="densenet-121-tf" precision="FP32" source="omz" />
+    </device>
+
+    <device name="CPU" iterations="1000" processes="1" threads="1">
+        <model name="ssd_mobilenet_v1_coco" precision="FP32" source="omz" />
+    </device>
+
+    <device name="CPU" iterations="1000" processes="1" threads="1">
+        <model name="face-recognition-resnet100-arcface-onnx" precision="FP32" source="omz" />
+    </device>
+
+    <device name="GPU" iterations="1000" processes="1" threads="1">
+        <model name="densenet-121-tf" precision="FP32" source="omz" />
+    </device>
+
+    <device name="GPU" iterations="1000" processes="1" threads="1">
+        <model name="ssd_mobilenet_v1_coco" precision="FP32" source="omz" />
+    </device>
+
+    <device name="GPU" iterations="1000" processes="1" threads="1">
+        <model name="face-recognition-resnet100-arcface-onnx" precision="FP32" source="omz" />
+    </device>
+
+    <device name="CPU" iterations="1000" processes="1" threads="1">
+        <model name="bert-base-ner" precision="FP32" source="omz" />
+    </device>
+
+    <device name="GPU" iterations="1000" processes="1" threads="1">
+        <model name="bert-base-ner" precision="FP32" source="omz" />
+    </device>
+
+    <device name="CPU" iterations="1000" processes="1" threads="1">
+        <model name="densenet-121-tf" precision="FP32" source="omz" />
+        <model name="ssd_mobilenet_v1_coco" precision="FP32" source="omz" />
+        <model name="face-recognition-resnet100-arcface-onnx" precision="FP32" source="omz" />
+    </device>
+
+    <device name="GPU" iterations="1000" processes="1" threads="1">
+        <model name="densenet-121-tf" precision="FP32" source="omz" />
+        <model name="ssd_mobilenet_v1_coco" precision="FP32" source="omz" />
+        <model name="face-recognition-resnet100-arcface-onnx" precision="FP32" source="omz" />
+    </device>
+
+</cases>
