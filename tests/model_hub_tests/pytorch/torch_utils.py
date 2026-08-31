@@ -1,0 +1,135 @@
+# Copyright (C) 2018-2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+import os
+import pytest
+import torch
+from models_hub_common.test_convert_model import TestConvertModel
+from models_hub_common.utils import get_models_list
+from openvino import convert_model, PartialShape
+
+
+def flattenize_tuples(list_input):
+    if not isinstance(list_input, (tuple, list)):
+        return [list_input]
+    unpacked_pt_res = []
+    for r in list_input:
+        unpacked_pt_res.extend(flattenize_tuples(r))
+    return unpacked_pt_res
+
+
+def flattenize_structure(outputs):
+    if not isinstance(outputs, dict):
+        outputs = flattenize_tuples(outputs)
+        return [i.numpy(force=True) if isinstance(i, torch.Tensor) else i for i in outputs]
+    else:
+        return dict((k, v.numpy(force=True) if isinstance(v, torch.Tensor) else v) for k, v in outputs.items())
+
+
+def process_pytest_marks(filepath: str):
+    return [
+        pytest.param(n, marks=pytest.mark.xfail(reason=r) if m ==
+                     "xfail" else pytest.mark.skip(reason=r)) if m else n
+        for n, _, m, r in get_models_list(filepath)]
+
+
+def extract_unsupported_ops_from_exception(e: str) -> list:
+    exception_str = "No conversion rule found for operations:"
+    for s in e.splitlines():
+        it = s.find(exception_str)
+        if it >= 0:
+            _s = s[it + len(exception_str):]
+            ops = _s.replace(" ", "").split(",")
+            return ops
+    return []
+
+
+def skip_npu_precommit(model_name, ie_device, skip_map):
+    """Skip a precommit model that is out of the NPU scope on the current NPU_PLATFORM.
+
+    `skip_map` maps a model name to the platforms where it must be skipped: either
+    the string "*" (all platforms) or an iterable of platform ids (e.g. {"3720"}).
+    The active platform is read from the NPU_PLATFORM environment variable.
+    """
+    if "NPU" not in (ie_device or ""):
+        return
+    platforms = skip_map.get(model_name)
+    if not platforms:
+        return
+    current = os.environ.get("NPU_PLATFORM", "")
+    if platforms == "*" or current in platforms:
+        pytest.skip(f"{model_name}: out of NPU scope on platform {current or 'unknown'}")
+
+
+class TestTorchConvertModel(TestConvertModel):
+    cached_model = None
+
+    def setup_class(self):
+        torch.set_grad_enabled(False)
+
+    def load_model(self, model_name, model_link):
+        raise RuntimeError("load_model is not implemented")
+
+    def get_inputs_info(self, model_obj):
+        return None
+
+    def prepare_inputs(self, inputs_info):
+        inputs = getattr(self, "inputs", self.example)
+        if isinstance(inputs, dict):
+            return dict((k, v.numpy()) for k, v in inputs.items())
+        else:
+            return flattenize_structure(inputs)
+
+    def npu_static_input(self):
+        # NPU requires static shapes: use example input dims
+        example = self.example
+        tensors = list(example.values()) if isinstance(example, dict) else flattenize_tuples(example)
+        return [PartialShape(list(t.shape)) for t in tensors]
+
+    def convert_model_impl(self, model_obj):
+        is_npu = 'NPU' in (getattr(self, "ie_device", "") or '')
+        if hasattr(self, "mode") and self.mode == "export":
+            export_kwargs = {}
+            if is_npu:
+                export_kwargs["input"] = self.npu_static_input()
+            elif getattr(self, "dynamo_input", None):
+                export_kwargs["input"] = self.dynamo_input
+            ov_model = convert_model(model_obj,
+                                     example_input=self.example,
+                                     verbose=True,
+                                     dynamo=True,
+                                     **export_kwargs,
+                                     )
+        else:
+            convert_kwargs = {}
+            if is_npu:
+                convert_kwargs["input"] = self.npu_static_input()
+            ov_model = convert_model(model_obj,
+                                     example_input=self.example,
+                                     verbose=True,
+                                     **convert_kwargs,
+                                     )
+        return ov_model
+
+    def convert_model(self, model_obj):
+        try:
+            ov_model = self.convert_model_impl(model_obj)
+        except Exception as e:
+            report_filename = os.environ.get("OP_REPORT_FILE", None)
+            if report_filename:
+                mode = 'a' if os.path.exists(report_filename) else 'w'
+                with open(report_filename, mode) as f:
+                    ops = extract_unsupported_ops_from_exception(str(e))
+                    if ops:
+                        ops = [f"{op} {self.model_name}" for op in ops]
+                        f.write("\n".join(ops) + "\n")
+            raise e
+        return ov_model
+
+    def infer_fw_model(self, model_obj, inputs):
+        if isinstance(inputs, dict):
+            inps = dict((k, torch.from_numpy(v)) for k, v in inputs.items())
+            fw_outputs = model_obj(**inps)
+        else:
+            fw_outputs = model_obj(*[torch.from_numpy(i) for i in inputs])
+        return flattenize_structure(fw_outputs)
